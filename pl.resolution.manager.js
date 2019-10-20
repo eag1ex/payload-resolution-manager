@@ -188,6 +188,11 @@ module.exports = (notify) => {
                 var data = []
                 for (var i = 0; i < d.length; i++) {
                     var item = d[i]
+                    if (item._uid === undefined) {
+                        if (this.debug) notify.ulog(`[perDataSet] no _uid available for this dataaSet, skipping`, true)
+                        continue
+                    }
+
                     if (item._uid === _uid) {
                         data.push(item)
                     }
