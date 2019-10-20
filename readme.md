@@ -41,6 +41,6 @@
 ##### Contact
  * Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=PayloadResolutionManager`
 
- ###### LICENSE
- * LICENCE: CC BY
- * SOURCE: https://creativecommons.org/licenses/by/4.0/legalcode
+##### LICENSE
+* LICENCE: CC BY
+* SOURCE: https://creativecommons.org/licenses/by/4.0/legalcode
