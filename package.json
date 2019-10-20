@@ -1,0 +1,18 @@
+{
+  "name": "payload-resolution-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index2.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bash-color": "0.0.4",
+    "eslint": "^6.5.1",
+    "lodash": "^4.17.15",
+    "standard": "^14.3.1",
+    "util": "^0.12.1"
+  }
+}
