@@ -21,32 +21,42 @@ var exampleData = (id = 0) => {
 // var uid = 'index1'
 // var a = resx.setupData(exampleData(2), uid).d
 // var b = resx.setupData(exampleData(1), uid).d
-// notify.ulog({ ab }) // will return combined for `a and b`
+// notify.ulog({ b }) // will return combined for `a and b`
 // resx.markData(uid) // once marked cannot add anymore `setupData` of the same `index1`
-// var finalize_index1Data = resx.finalize(null, uid) // will also delete all data uppon finish
+// var finalize_index1Data = resx.finalize(null, uid) // return final data and delete from class
 // notify.ulog({ finalize_index1Data })
 // end
 
 // example 2
-// var uid = 'index5'
-// var a = resx.setupData(exampleData(3), uid).d
-// // notify.ulog({ a }) // will return only for `a`
-// var b = resx.setupData(exampleData(2), 'index3').d
+var uid = 'index5'
+var a = resx.setupData(exampleData(3), uid).d
+// notify.ulog({ a }) // will return only for `a`
+var b = resx.setupData(exampleData(2), 'index3').d
 // notify.ulog({ b }) // will return only for `b`
-// var finalize_index5Data = resx.finalize(null, uid) // only delete data for `index5`, `index3` will still remain
-// notify.ulog({ finalize_index5Data })
+resx.computation(item => {
+    // NOTE do some calculation, must pass same array size as initial data
+    item = [[], [], [], [], [], ['abc']]
+    return item
+}, uid)
+
+// updated value for `index5`
+var updated = resx.getItem(uid, true).d
+notify.ulog({ updated }) // return latest update from computation before calling finalize
+
+var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
+notify.ulog({ finalize_index5Data })
 // end
 
 // example 3
 // var a = resx.setupData(exampleData(2), 'index6').d
 // var b = resx.setupData(exampleData(1), 'index6').d
 // var c = resx.setupData(exampleData(3), 'index6').d
-// resx.markData('index6') // if you remove this mark then below exampleData(0) will then be included in `index6`!
+// resx.markData('index6') // if set, any setupData for the same `uid` will be ignored
 
 // var d = resx.setupData(exampleData(0), 'index6').d // data from exampleData(0) is never added to `index6`
-// notify.ulog({ d }) // will return from `a,b,c`. Data from `d` will be ignored!
+// notify.ulog({ d }) // will return from `a,b,c`. Data from `d`is ignored!
 
-// var finalize_index6Data = resx.finalize(null, 'index6') // only delete data for `index5`, `index3` will still remain
+// var finalize_index6Data = resx.finalize(null, 'index6') // return final data and delete from class
 // notify.ulog({ finalize_index6Data })
 // end
 
@@ -78,12 +88,18 @@ var exampleData = (id = 0) => {
 // example 5, chaining
 // NOTE you can chain methodes as well
 // make sure that you update your `uid` when doing concurent chain with different `uid`
-var a = resx.setupData(exampleData(2), 'index9')
-    .setupData(exampleData(1))
-    // .setupData(exampleData(3), 'index1') // as explained above this would only produce finalize for `uid:index1`
+// var a = resx.setupData(exampleData(2), 'index9')
+//     .setupData(exampleData(1))
+//     // .setupData(exampleData(3), 'index1') // as explained above this would only produce finalize for `uid:index1`
 
-    // set doDelete=false if you do not wish to delete you data from the arch
-    .finalize(/** customData, `index9`, doDelete=true */)
+//     .computation(item => {
+//         // NOTE do some calculation, must pass same array size as initial data
+//         // item = [[], [], [], [], [], [], [], []]
+//         return item
+//     }/** ,uid */)
 
-notify.ulog({ index9_a: a })
+//     // set doDelete=false if you do not wish to delete you data from the arch
+//     .finalize(/** customData, `index9`, doDelete=true */)
+
+// notify.ulog({ index9_a: a })
 // end

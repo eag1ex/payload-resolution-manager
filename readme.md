@@ -13,6 +13,10 @@
 ##### Usage
 - Examples in the `index.js`, simply uncomment each one.
 
+
+
+
+
 ##### Example output:
 `
      [{ dataSet: { name: 'daniel', age: 35 }, _ri: 0, _uid: 'index6' },
@@ -29,6 +33,7 @@
      { dataSet: { name: 'marcus', age: 68 }, _ri: 11, _uid: 'index6' },
      { dataSet: { name: 'alexander', age: 44 }, _ri: 12, _uid: 'index6'}]
 `
+
 
 
 

@@ -6,7 +6,7 @@
  */
 
 module.exports = (notify) => {
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, isArray, isNumber } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, isArray, isNumber, head, flatMap } = require('lodash')
 
     class PayloadResolutioManager {
         constructor(debug) {
@@ -27,6 +27,10 @@ module.exports = (notify) => {
             this._lastItemData = null // last updated at `finalize` methode
             this.d = null // updated via `setupData` methode
             // once all data for each payload resolution is set to be worked on, we mark it as true
+            // grab last data returned by `setupData`
+            this.grab_ref = {
+                // uid > this.d
+            }
             this.dataArchSealed = {}
         }
 
@@ -56,6 +60,54 @@ module.exports = (notify) => {
             this.valUID(uid)
             this.d = this.setRequestPayload(data, uid)
                 .getItem(uid) // return item dataSet[...]
+
+            this.grab_ref[uid] = this.d
+            return this
+        }
+
+        /**
+         * @computation
+         * - do custom computation and return the value, will update this item on finalize
+         * `callback` cann access item data to munipulate, must return same array size
+         * `uid` if uid is not provided will try to use last available
+         */
+        computation(cb, uid) {
+            if (!uid) uid = this._lastUID
+            else this._lastUID = uid
+            this.valUID(uid)
+
+            if (typeof cb === 'function') {
+                if (this.grab_ref[uid]) {
+                    /// did some calculations and returned update
+                    var itemUpdated = cb(this.grab_ref[uid])
+                    delete this.grab_ref[uid]
+
+                    if (isArray(itemUpdated)) {
+                        if (itemUpdated.length !== this.resIndex[uid].length) {
+                            notify.ulog('[grabData], nothing updated, callback item does not match initial data size')
+                            return this
+                        }
+                        // double check if required values were supplied
+                        itemUpdated = itemUpdated.map((z, i) => {
+                            var itm = {}
+
+                            if (isObject(z) && !isArray(z)) {
+                                itm['_ri'] = z._ri !== undefined ? z._ri : i
+                                itm['_uid'] = z._uid || uid
+                                itm['dataSet'] = z.dataSet || null
+                            } else {
+                                itm['_ri'] = i
+                                itm['_uid'] = uid
+                                itm['dataSet'] = z || null
+                            }
+                            return itm
+                        }).filter(n => !!n)
+
+                        this.dataArch[uid] = flatMap(itemUpdated) // in case you passed [[]] :)
+                        this.dataArch = Object.assign({}, this.dataArch)
+                    }
+                }
+            }
             return this
         }
 
@@ -192,52 +244,42 @@ module.exports = (notify) => {
                         if (this.debug) notify.ulog(`[perDataSet] no _uid available for this dataaSet, skipping`, true)
                         continue
                     }
-
-                    if (item._uid === _uid) {
-                        data.push(item)
-                    }
+                    if (item._uid === _uid) data.push(item)
                 }
                 return data
             }
 
-            if (isObject(yourData) && !isArray(yourData)) {
-                // cycle thru each reference
-                for (var k in yourData) {
-                    if (!yourData.hasOwnProperty(k)) continue
-                    var dataSet = yourData[k]
-                    if (dataRef) dataSet = dataSet[dataRef]
+            var providerData = isObject(yourData) && !isArray(yourData) ? yourData : this.dataArch
+            providerData = cloneDeep(providerData)
 
-                    if (!dataSet) {
-                        if (this.debug) notify.ulog(`dataSet not available`, true)
-                        continue
-                    }
-                    if (!isArray(dataSet)) throw ('provided dataSet must be an array!')
-                    fData = [].concat(perDataSet(dataSet, uid), fData)
+            // cycle thru each reference
+            for (var k in providerData) {
+                if (!providerData.hasOwnProperty(k)) continue
+
+                var dataSet = providerData[k]
+                if (dataSet.hasOwnProperty(dataRef)) dataSet = dataSet[dataRef]
+
+                if (!dataSet) {
+                    if (this.debug) notify.ulog(`dataSet not available`, true)
+                    continue
                 }
-            } else {
-                for (var k in this.dataArch) {
-                    if (!this.dataArch.hasOwnProperty(k)) continue
-
-                    var dataSet = cloneDeep(this.dataArch)[k]
-                    if (dataRef) dataSet = dataSet[dataRef]
-
-                    if (!dataSet) {
-                        if (this.debug) notify.ulog(`dataSet not available`, true)
-                        continue
-                    }
-                    fData = [].concat(perDataSet(dataSet, uid), fData)
-                }
+                if (!isArray(dataSet)) throw ('provided dataSet must be an array!')
+                fData = [].concat(perDataSet(dataSet, uid), fData)
             }
 
             if (!this.resIndex[uid]) {
                 if (this.debug) notify.ulog({ message: '[finalize] uid provided did not match resIndex' }, true)
                 this._lastItemData = null
+                this._lastUID = null
+                this.d = null
                 return null
             }
             if (!fData.length) {
                 if (doDelete) this.deleteSet(uid)
                 if (this.debug) notify.ulog({ message: '[finalize] fData[] no results' }, true)
                 this._lastItemData = []
+                this._lastUID = null
+                this.d = null
                 return []
             }
             // NOTE
@@ -255,34 +297,44 @@ module.exports = (notify) => {
             }
 
             var output = []
-
             var verify_index = Object.keys(verify).filter(z => verify[z] === true)
 
             if (verify_index.length === Object.keys(verify).length) {
                 // update lastItem in our format
                 this._lastItemData = fData
 
-                // return clean output
-                if (!yourData) {
-                    for (var n = 0; n < fData.length; n++) {
-                        var itm = fData[n].dataSet
-                        output.push(itm)
-                    }
-                } else {
-                    for (var n = 0; n < fData.length; n++) {
-                        var itm = dataRef ? fData[n][dataRef] : fData[n]
-                        output.push(itm)
+                for (var n = 0; n < fData.length; n++) {
+                    var item = fData[n]
+                    // check if item is an object of arrays
+                    if (isObject(item) && !isArray(item)) {
+                        // get anonymous keyName `most likely dataSet`
+                        var anonymousKey = Object.keys(item)
+                        anonymousKey = head(anonymousKey.filter(z => {
+                            var not_uid = z !== '_uid'
+                            var not_ri = z !== '_ri'
+                            return not_uid && not_ri
+                        }))
+
+                        var itm = fData[n][anonymousKey]
+                        if (itm) {
+                            output.push(itm)
+                            continue
+                        }
                     }
                 }
+
                 if (doDelete) this.deleteSet(uid)
                 // all good
-
+                this._lastUID = null
+                this.d = null
                 return output
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)
                 notify.ulog({ message: '[finalize] falied to match resIndex', failed_index, uid })
                 if (doDelete) this.deleteSet(uid)
                 this._lastItemData = null
+                this._lastUID = null
+                this.d = null
                 return null
             }
         }
@@ -369,11 +421,19 @@ module.exports = (notify) => {
 
         /**
          * @getItem
-         * -
+         * `uid` must provide uid
+         * `_self`  optional, if set specify `getItem.d` to return items data
          */
-        getItem(uid) {
+        getItem(uid, _self) {
             this.valUID(uid)
-            if (this.dataArchSealed[uid] === false) {
+            if (_self) {
+                var d = cloneDeep(this.dataArch[uid])
+                if (d) this.d = d
+                return this
+            }
+
+            this.d = null
+            if (this.dataArchSealed[uid] === false && !_self) {
                 return cloneDeep(this.dataArch[uid])
             } else {
                 notify.ulog({ message: 'warning you cannot retrieve this items data, as it is not available', uid }, true)
