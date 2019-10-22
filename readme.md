@@ -50,7 +50,7 @@ var a = resx.setupData(exampleData(2), 'index10')
         // NOTE do some calculation for `each` item, must return 1 item
         item.dataSet.age += 20
         return item
-    }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+    }, null, 'each') // we can ignore `uid:null` since we are chaining this job
     // if we provided `index11` internal value will change, need to specify what to finalize!
     // .markDone() // will ignore any setupData from update
     .setupData(exampleData(5))
