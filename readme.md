@@ -39,7 +39,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 * `deleteSet(uid, force:true)`: you require some hacking, manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 
-# Features:
+##### Features:
 - This application supports chaining of methods, example:
 `
 var a = resx.setupData(exampleData(2), 'index10')
