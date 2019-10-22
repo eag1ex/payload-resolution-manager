@@ -127,7 +127,6 @@ var exampleData = (id = 0) => {
 // make sure that you update your `uid` when doing concurent chain with different `uid`
 var a = resx.setupData(exampleData(2), 'index10')
     .setupData(exampleData(1))
-
     .setupData(exampleData(3)) // add data to this item
 // .setupData(exampleData(5), 'index11')
     .computation(item => {
@@ -136,7 +135,7 @@ var a = resx.setupData(exampleData(2), 'index10')
         return item
     }, null, 'each') // we ignored `uid:null` since we are chaining only one job
     // if we provided `index11` internal value will change, need to specify what to finalize!
-    // .markDone() // will ignore any setupData from update
+    // .markDone(/*uid*/) // will ignore setupData for uid:index10 from future updates
     .setupData(exampleData(5))
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
