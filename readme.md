@@ -41,7 +41,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 
 ##### Features:
 - This application supports chaining of methods, example:
-`
+``
 var a = resx.setupData(exampleData(2), 'index10')
     .setupData(exampleData(1))
     .setupData(exampleData(3)) // add data to this item
@@ -57,7 +57,7 @@ var a = resx.setupData(exampleData(2), 'index10')
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
 notify.ulog({ index10_a: a })
-`
+``
 
 ##### Example output:
 `
