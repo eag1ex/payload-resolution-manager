@@ -28,7 +28,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
      - `doDelete:true` will always delete the job from class cache after its finilized, you have the option not to delete it! 
 
 * `computation(callback(), uid, method='all',uid)`: use this method to perform data calculation for each `uid`.
-     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items. When `method=each` then will loop thru each item sequently, you must return only 1 item. 
+     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` then will loop thru each item sequently, you must return only 1 item. 
      - `uid`: must provide uid for data if not chaining. If you set `uid`=null it will look for last used uid
 
 * `getItem(uid,self:boolean)`:  return data for desired `uid` in raw state, with `_uid`, `_ri` and `dataSet`.
