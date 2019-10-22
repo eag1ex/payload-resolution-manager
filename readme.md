@@ -14,6 +14,36 @@
 - Examples in the `index.js`, simply uncomment each one.
 
 
+##### Features:
+- This application supports chaining of methods, example:
+```
+var uid = 'index12'
+
+var d1 = [{ name: 'alex', age: 20 }]
+var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }]
+var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }]
+var d4 = ['a', null, false]
+
+var nn = resx.setupData(d1, uid)
+    .setupData(d2)
+    .setupData(d3) // add data to this item
+// .setupData(exampleData(5), 'index11')
+    .computation(item => {
+        // NOTE do some calculation for `each` item, must return 1 item
+        //
+        item.dataSet.age += 20
+        return item
+    }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+    // if we provided `index11` internal value will change, need to specify what to finalize!
+// .markDone(/*uid */) // will ignore setupData for uid:index12 from future updates
+    .setupData(d4)
+    .finalize()
+    // .finalize(/** customData, `index11`, doDelete=true */)
+notify.ulog({ index10_nn: nn })
+
+```
+
+
 ##### Methodes explained:
 * `uid:String`: Must provide uid for every data asset, per job. If you do not specify, it will first try to find last used uid.
 * `data[...]`: Every job you provide must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
@@ -23,11 +53,11 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 * `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
 
 * `finalize(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
-     - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,uid],... }`, otherwise provide `null`
+     - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
      - `dataRef` your data is from external source:yourData, you have the option to provide `dataRef` if its other then `dataSet`
      - `doDelete:true` will always delete the job from class cache after its finilized, you have the option not to delete it! 
 
-* `computation(callback(), uid, method='all',uid)`: use this method to perform data calculation for each `uid`.
+* `computation(callback(), uid, method='all')`: use this method to perform data calculation for each `uid`.
      - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` then will loop thru each item sequently, you must return only 1 item. 
      - `uid`: must provide uid for data if not chaining. If you set `uid`=null it will look for last used uid
 
@@ -39,25 +69,6 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 * `deleteSet(uid, force:true)`: you require some hacking, manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 
-##### Features:
-- This application supports chaining of methods, example:
-```
-var a = resx.setupData(exampleData(2), 'index10')
-    .setupData(exampleData(1))
-    .setupData(exampleData(3)) // add data to this item
-// .setupData(exampleData(5), 'index11')
-    .computation(item => {
-        // NOTE do some calculation for `each` item, must return 1 item
-        item.dataSet.age += 20
-        return item
-    }, null, 'each') // we can ignore `uid:null` since we are chaining this job
-    // if we provided `index11` internal value will change, need to specify what to finalize!
-    // .markDone(/*uid*/) // will ignore setupData for uid:index10 from future updates
-    .setupData(exampleData(5))
-    .finalize()
-    // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ index10_a: a })
-```
 
 ##### Example output:
 ```
