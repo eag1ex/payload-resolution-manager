@@ -14,7 +14,8 @@
 - Examples in the `index.js`, simply uncomment each one.
 
 
-
+##### Methodes explained:
+- `setupData`:
 
 
 ##### Example output:

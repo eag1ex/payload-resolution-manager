@@ -6,7 +6,7 @@
  */
 
 module.exports = (notify) => {
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, isArray, isNumber, head, flatMap } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, isArray, isNumber, head, flatMap, times } = require('lodash')
 
     class PayloadResolutioManager {
         constructor(debug) {
@@ -70,31 +70,38 @@ module.exports = (notify) => {
          * - do custom computation and return the value, will update this item on finalize
          * `callback` cann access item data to munipulate, must return same array size
          * `uid` if uid is not provided will try to use last available
+         * `method` there are 2 types: `each` and `all` as the name suggests callback will be performend on every item[x] or only once for all
          */
-        computation(cb, uid) {
+        computation(cb, uid, method = 'all') {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
             this.valUID(uid)
 
             if (typeof cb === 'function') {
                 if (this.grab_ref[uid]) {
-                    /// did some calculations and returned update
-                    var itemUpdated = cb(this.grab_ref[uid])
-                    delete this.grab_ref[uid]
-
-                    if (isArray(itemUpdated)) {
-                        if (itemUpdated.length !== this.resIndex[uid].length) {
-                            notify.ulog('[grabData], nothing updated, callback item does not match initial data size')
-                            return this
-                        }
+                    var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
-                        itemUpdated = itemUpdated.map((z, i) => {
+                        return items.map((z, i) => {
                             var itm = {}
-
+                            if (inx !== null) i = inx // when for `each` index need to come from external loop
                             if (isObject(z) && !isArray(z)) {
                                 itm['_ri'] = z._ri !== undefined ? z._ri : i
                                 itm['_uid'] = z._uid || uid
+                                if (!z.dataSet) {
+                                    if (this.debug) notify.ulog(`[computation] .dataSet must be set for all user values or it will return null`)
+                                }
                                 itm['dataSet'] = z.dataSet || null
+                                if (Object.keys(z).length > 3) {
+                                    var ignored = Object.keys(z).filter(n => {
+                                        return n !== '_ri' && n !== '_uid' && n !== 'dataSet'
+                                    })
+                                    if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                    times(ignored.length, (i) => {
+                                        var del = ignored[i]
+                                        delete z[del]
+                                        delete itm[del]
+                                    })
+                                }
                             } else {
                                 itm['_ri'] = i
                                 itm['_uid'] = uid
@@ -102,11 +109,45 @@ module.exports = (notify) => {
                             }
                             return itm
                         }).filter(n => !!n)
+                    }
 
-                        this.dataArch[uid] = flatMap(itemUpdated) // in case you passed [[]] :)
+                    var updateData
+                    if (method === 'all') {
+                        var updated = cb(this.grab_ref[uid])
+
+                        if (isArray(updateData)) {
+                            if (updateData.length !== this.resIndex[uid].length) {
+                                notify.ulog('[computation], nothing updated, callback item does not match initial data size')
+                                return this
+                            }
+                        }
+
+                        updateData = itemUpdated(updated)
+                    } // for all
+
+                    if (method === 'each') {
+                        updateData = this.grab_ref[uid].map((z, i) => {
+                            // do for each callback
+                            var u = flatMap([cb(z)])
+
+                            if (u.length > 1 || !isArray(u)) {
+                                notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
+                                return null
+                            }
+                            var dd = itemUpdated(u, i)
+                            return head(dd)
+                        })
+                    }// for each
+
+                    delete this.grab_ref[uid]
+
+                    if (updateData) {
+                        this.dataArch[uid] = flatMap(updateData) // in case you passed [[]] :)
                         this.dataArch = Object.assign({}, this.dataArch)
                     }
                 }
+            } else {
+                if (this.debug) notify.ulog(`pointless without callback, nothing changed`)
             }
             return this
         }
@@ -120,6 +161,13 @@ module.exports = (notify) => {
                 if (this.debug) notify.ulog(`seams that uid provided does not match any available data by reference`, true)
             }
             return valid
+        }
+
+        reset(uid) {
+            this._lastItemData = null
+            delete this.grab_ref[uid]
+            this._lastUID = null
+            this.d = null
         }
 
         /**
@@ -269,17 +317,13 @@ module.exports = (notify) => {
 
             if (!this.resIndex[uid]) {
                 if (this.debug) notify.ulog({ message: '[finalize] uid provided did not match resIndex' }, true)
-                this._lastItemData = null
-                this._lastUID = null
-                this.d = null
+                this.reset(uid)
                 return null
             }
             if (!fData.length) {
                 if (doDelete) this.deleteSet(uid)
                 if (this.debug) notify.ulog({ message: '[finalize] fData[] no results' }, true)
-                this._lastItemData = []
-                this._lastUID = null
-                this.d = null
+                this.reset(uid)
                 return []
             }
             // NOTE
@@ -325,16 +369,13 @@ module.exports = (notify) => {
 
                 if (doDelete) this.deleteSet(uid)
                 // all good
-                this._lastUID = null
-                this.d = null
+                this.reset(uid)
                 return output
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)
                 notify.ulog({ message: '[finalize] falied to match resIndex', failed_index, uid })
                 if (doDelete) this.deleteSet(uid)
-                this._lastItemData = null
-                this._lastUID = null
-                this.d = null
+                this.reset(uid)
                 return null
             }
         }

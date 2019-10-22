@@ -28,24 +28,41 @@ var exampleData = (id = 0) => {
 // end
 
 // example 2
+// var uid = 'index5'
+// var a = resx.setupData(exampleData(3), uid).d
+// // notify.ulog({ a }) // will return only for `a`
+// var b = resx.setupData(exampleData(2), 'index3').d
+// // notify.ulog({ b }) // will return only for `b`
+// resx.computation(item => {
+//     // NOTE do some calculation, must pass same array size as initial data
+//     item = [[], [], [], [], [], ['abc']]
+//     return item
+// }, uid)
+// // updated value for `index5`
+// var updated = resx.getItem(uid, true).d
+// notify.ulog({ updated }) // return latest update from computation before calling finalize
+
+// var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
+// notify.ulog({ finalize_index5Data })
+// end
+
+// example 2a
 var uid = 'index5'
 var a = resx.setupData(exampleData(3), uid).d
 // notify.ulog({ a }) // will return only for `a`
 var b = resx.setupData(exampleData(2), 'index3').d
 // notify.ulog({ b }) // will return only for `b`
 resx.computation(item => {
-    // NOTE do some calculation, must pass same array size as initial data
-    item = [[], [], [], [], [], ['abc']]
+    // NOTE with `each` option callback runs thru each item, you must return 1 item
+    item.dataSet.age += 20
     return item
-}, uid)
-
+}, uid, 'each')
 // updated value for `index5`
 var updated = resx.getItem(uid, true).d
-notify.ulog({ updated }) // return latest update from computation before calling finalize
+// notify.ulog({ updated }) // return latest update from computation before calling finalize
 
 var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
 notify.ulog({ finalize_index5Data })
-// end
 
 // example 3
 // var a = resx.setupData(exampleData(2), 'index6').d
