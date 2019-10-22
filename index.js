@@ -21,7 +21,7 @@ var exampleData = (id = 0) => {
 // NOTE base chaining example
 
 // make sure that you update your `uid` when doing concurent chain with different `uid`
-var uid = 'index12'
+var uid = 'job_1'
 
 var d1 = [{ name: 'alex', age: 20 }]
 var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }]
@@ -43,7 +43,7 @@ var nn = resx.setupData(d1, uid)
     .setupData(d4)
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ index10_nn: nn })
+notify.ulog({ job_1_nn: nn })
 
 // returns:
 // [ { name: 'alex', age: 40 },
