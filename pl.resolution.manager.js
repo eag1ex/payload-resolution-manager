@@ -77,6 +77,11 @@ module.exports = (notify) => {
             else this._lastUID = uid
             this.valUID(uid)
 
+            if (this.dataArchSealed[uid]) {
+                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothung changed!`, true)
+                return this
+            }
+
             if (typeof cb === 'function') {
                 if (this.grab_ref[uid]) {
                     var itemUpdated = (items, inx = null) => {
@@ -163,18 +168,27 @@ module.exports = (notify) => {
             return valid
         }
 
-        reset(uid) {
+        /**
+         * @reset
+         * only call reset with `force=true`
+         */
+        reset(uid, force = true) {
+            if (!uid) uid = this._lastUID
+            else this._lastUID = uid
+            if (!force) return
             this._lastItemData = null
+            delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
             this._lastUID = null
             this.d = null
+            return this
         }
 
         /**
          * @deleteSet
          * - delete set by `uid`
          */
-        deleteSet(uid) {
+        deleteSet(uid, force = false) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -186,6 +200,10 @@ module.exports = (notify) => {
             delete this.dataArchSealed[uid]
             delete this.dataArch[uid]
             delete this.resIndex[uid]
+
+            // deleteSet is performed from finalize when option `doDelete is set`, followed by rest
+
+            this.reset(uid, force)
 
             if (this.debug) {
                 var countA = Object.keys(copyArch).length - Object.keys(this.dataArch).length
@@ -276,7 +294,6 @@ module.exports = (notify) => {
         finalize(yourData, uid, dataRef, doDelete = true) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
-
             this.valUID(uid)
 
             // find all payloads that belong to same uid
@@ -349,6 +366,7 @@ module.exports = (notify) => {
 
                 for (var n = 0; n < fData.length; n++) {
                     var item = fData[n]
+
                     // check if item is an object of arrays
                     if (isObject(item) && !isArray(item)) {
                         // get anonymous keyName `most likely dataSet`
@@ -360,7 +378,7 @@ module.exports = (notify) => {
                         }))
 
                         var itm = fData[n][anonymousKey]
-                        if (itm) {
+                        if (itm !== undefined) {
                             output.push(itm)
                             continue
                         }
@@ -381,14 +399,17 @@ module.exports = (notify) => {
         }
 
         /**
-         * @markData
+         * @markDone
          * - mark `dataArch`[index] as ready for work
          * - you should set it just before return, or after async call!
          */
-        markData(uid) {
+        markDone(uid) {
+            if (!uid) uid = this._lastUID
+            else this._lastUID = uid
+
             this.valUID(uid)
             if (!this.dataArch[uid]) {
-                if (this.debug) notify.ulog(`[markData] cannot mark this uid since data does not exist`, true)
+                if (this.debug) notify.ulog(`[markDone] cannot mark this uid since data does not exist`, true)
                 return this
             }
             this.dataArchSealed[uid] = true

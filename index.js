@@ -11,7 +11,8 @@ var exampleData = (id = 0) => {
         1: [{ name: 'john', age: 22 }, { name: 'mary', age: 15 }, { name: 'denny', age: 19 }, { name: 'gery', age: 55 }, { name: 'greg', age: 66 }],
         2: [{ name: 'daniel', age: 35 }, { name: 'lary', age: 65 }, { name: 'andy', age: 54 }],
         3: [{ name: 'jamie', age: 31 }, { name: 'derick', age: 44 }, { name: 'lily', age: 21 }, { name: 'marcus', age: 68 }, { name: 'alexander', age: 44 }, { name: 'derick', age: 77 }],
-        4: [[1], [2]]
+        4: [[1], [2]],
+        5: ['a', [], {}, null, false, 1, new Function()]
     }
     if (data[id] === undefined) throw (`invalid id provided ${id}`)
     return data[id]
@@ -22,7 +23,7 @@ var exampleData = (id = 0) => {
 // var a = resx.setupData(exampleData(2), uid).d
 // var b = resx.setupData(exampleData(1), uid).d
 // notify.ulog({ b }) // will return combined for `a and b`
-// resx.markData(uid) // once marked cannot add anymore `setupData` of the same `index1`
+// resx.markDone(uid) // once marked cannot add anymore `setupData` of the same `index1`
 // var finalize_index1Data = resx.finalize(null, uid) // return final data and delete from class
 // notify.ulog({ finalize_index1Data })
 // end
@@ -47,28 +48,28 @@ var exampleData = (id = 0) => {
 // end
 
 // example 2a
-var uid = 'index5'
-var a = resx.setupData(exampleData(3), uid).d
-// notify.ulog({ a }) // will return only for `a`
-var b = resx.setupData(exampleData(2), 'index3').d
-// notify.ulog({ b }) // will return only for `b`
-resx.computation(item => {
-    // NOTE with `each` option callback runs thru each item, you must return 1 item
-    item.dataSet.age += 20
-    return item
-}, uid, 'each')
-// updated value for `index5`
-var updated = resx.getItem(uid, true).d
+// var uid = 'index5'
+// var a = resx.setupData(exampleData(5), uid).d
+// // notify.ulog({ a }) // will return only for `a`
+// // var b = resx.setupData(exampleData(2), 'index3').d
+// // notify.ulog({ b }) // will return only for `b`
+// // resx.computation(item => {
+// //     // NOTE with `each` option callback runs thru each item, you must return 1 item
+// //     //  item.dataSet.age += 20
+// //     return item
+// // }, uid, 'each')
+// // updated value for `index5`
+// var updated = resx.getItem(uid, true).d
 // notify.ulog({ updated }) // return latest update from computation before calling finalize
 
-var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
-notify.ulog({ finalize_index5Data })
+// var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
+// notify.ulog({ finalize_index5Data })
 
 // example 3
 // var a = resx.setupData(exampleData(2), 'index6').d
 // var b = resx.setupData(exampleData(1), 'index6').d
 // var c = resx.setupData(exampleData(3), 'index6').d
-// resx.markData('index6') // if set, any setupData for the same `uid` will be ignored
+// resx.markDone('index6') // if set, any setupData for the same `uid` will be ignored
 
 // var d = resx.setupData(exampleData(0), 'index6').d // data from exampleData(0) is never added to `index6`
 // notify.ulog({ d }) // will return from `a,b,c`. Data from `d`is ignored!
@@ -102,7 +103,7 @@ notify.ulog({ finalize_index5Data })
 // notify.ulog({ itemData })
 // end
 
-// example 5, chaining
+// example 6, chaining
 // NOTE you can chain methodes as well
 // make sure that you update your `uid` when doing concurent chain with different `uid`
 // var a = resx.setupData(exampleData(2), 'index9')
@@ -120,3 +121,23 @@ notify.ulog({ finalize_index5Data })
 
 // notify.ulog({ index9_a: a })
 // end
+
+// example 7, chaining
+// NOTE you can chain methodes as well
+// make sure that you update your `uid` when doing concurent chain with different `uid`
+var a = resx.setupData(exampleData(2), 'index10')
+    .setupData(exampleData(1))
+
+    .setupData(exampleData(3)) // add data to this item
+// .setupData(exampleData(5), 'index11')
+    .computation(item => {
+        // NOTE do some calculation for `each` item, must return 1 item
+        item.dataSet.age += 20
+        return item
+    }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+    // if we provided `index11` internal value will change, need to specify what to finalize!
+    // .markDone() // will ignore any setupData from update
+    .setupData(exampleData(5))
+    .finalize()
+    // .finalize(/** customData, `index11`, doDelete=true */)
+notify.ulog({ index10_a: a })
