@@ -17,12 +17,12 @@
 ##### Features:
 - This application supports chaining of methods, example:
 ```
-var uid = 'index12'
+var uid = 'job_1'
 
-var d1 = [{ name: 'alex', age: 20 }]
-var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }]
-var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }]
-var d4 = ['a', null, false]
+var d1 = [{ name: 'alex', age: 20 }] // _ri = 0
+var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 1,2
+var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 3,4,5
+var d4 = ['a', null, false] // _ri = 6
 
 var nn = resx.setupData(d1, uid)
     .setupData(d2)
@@ -30,7 +30,8 @@ var nn = resx.setupData(d1, uid)
 // .setupData(exampleData(5), 'index11')
     .computation(item => {
         // NOTE do some calculation for `each` item, must return 1 item
-        //
+
+        // if (item._ri===0) // do something
         item.dataSet.age += 20
         return item
     }, null, 'each') // we ignored `uid:null` since we are chaining only one job
@@ -39,7 +40,7 @@ var nn = resx.setupData(d1, uid)
     .setupData(d4)
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ index10_nn: nn })
+notify.ulog({ job_1_nn: nn })
 
 ```
 
