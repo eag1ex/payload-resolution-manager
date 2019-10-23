@@ -47,11 +47,20 @@ notify.ulog({ job_1_nn: nn })
 
 ##### Methodes explained:
 * `uid:String`: Must provide uid for every data asset, per job. If you do not specify, it will first try to find last used uid.
+
 * `data[...]`: Every job you provide must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
+
 * `setupData(data:Array,uid:String)`: Provide your request data as array (can be single array),with uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid` . You can provide concurent `setupData` for the same `uid` via chaining or by line, up to you, this item will then be updated in the class scope.
 
+* `updateDataSet(uid,newDataSet,type)` : update items dataSet targted via `_ri` together with `uid` 
+     - `newDataSet` can be any data, example: {},[],1,true, except for null
+     - `type:string`: can specify `merge` or `new` 
+
 * `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
+
+
+* `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
 * `finalize(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
      - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`

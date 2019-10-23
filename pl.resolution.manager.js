@@ -6,7 +6,7 @@
  */
 
 module.exports = (notify) => {
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, isArray, isNumber, head, flatMap, times } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times } = require('lodash')
 
     class PayloadResolutioManager {
         constructor(debug) {
@@ -56,13 +56,173 @@ module.exports = (notify) => {
         setupData(data, uid) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
-
             this.valUID(uid)
+
+            if (this.dataArchSealed[uid]) {
+                if (this.debug) notify.ulog('[setupData] data already sealed cannot update', true)
+                return this
+            }
+
             this.d = this.setRequestPayload(data, uid)
                 .getItem(uid) // return item dataSet[...]
 
             this.grab_ref[uid] = this.d
             return this
+        }
+
+        /**
+         * @updateDataSet
+         * - update dataSet target by `_ri`
+         * `_ri` must be a number, starts from 0
+         * `newDataSet` :  data you want to include in your updated dataSet example: {name, age}, or, can be any value
+         * `type` : merge > you want to merge old with new , new> you want to replace the orl
+         */
+        updateDataSet(uid, _ri, newDataSet = null, type = 'new') {
+            if (!uid) uid = this._lastUID
+            else this._lastUID = uid
+            this.valUID(uid)
+
+            var isNum = (d) => {
+                return typeof d === 'number'
+            }
+
+            if (_ri === undefined) {
+                if (this.debug) notify.ulog('[updateDataSet] _ri must be a number', true)
+                return this
+            }
+
+            if (!isNum(_ri)) {
+                if (this.debug) notify.ulog('[updateDataSet] _ri must be a number', true)
+            }
+
+            if (newDataSet === null) {
+                return this
+            }
+
+            if (!this.dataArch[uid]) {
+                if (this.debug) notify.ulog('[updateDataSet] uid doesnt exist', true)
+                return this
+            }
+            if (this.dataArchSealed[uid]) {
+                if (this.debug) notify.ulog('[updateDataSet] data already sealed cannot update', true)
+                return this
+            }
+
+            var updated = null
+            for (var i = 0; i < this.dataArch[uid].length; i++) {
+                var dataSets = this.dataArch[uid][i].dataSet
+                if (dataSets !== undefined) {
+                    if (this.dataArch[uid][i]._ri === _ri) {
+                        if (type === 'new') this.dataArch[uid][i].dataSet = newDataSet
+                        if (type === 'merge') this.dataArch[uid][i].dataSet = merge(dataSets, newDataSet)
+                        this.dataArch = Object.assign({}, this.dataArch)
+                        updated = true
+                    }
+                }
+            }
+
+            if (!updated) {
+                if (this.debug) notify.ulog('[updateDataSet] nothing updated, ri match not found', true)
+            }
+
+            return this
+        }
+
+        /**
+         * @updateSetup
+         * update itemDataSet only, if previously set by `setupData` !
+         * does not grow item, only preplace with new data
+         * `newData` must provide raw data returned from `setupData` or use `getItem(uid)` and return it here
+         */
+        updateSetup(newData, uid) {
+            if (!uid) uid = this._lastUID
+            else this._lastUID = uid
+            this.valUID(uid)
+
+            if (this.dataArchSealed[uid]) {
+                if (this.debug) notify.ulog('data already sealed cannot update', true)
+                return this
+            }
+
+            this.d = null
+
+            if (!isArray(newData)) {
+                if (this.debug) notify.ulog('newData must be an array, nothing done', true)
+                return this
+            }
+
+            if (!newData.length) {
+                if (this.debug) notify.ulog('newData cannot be empty, nothing done', true)
+                return this
+            }
+
+            var newItemDataSet = this._validDataItem(newData, uid)
+            if (!isEmpty(newItemDataSet) && isArray(newItemDataSet)) {
+                this.dataArch[uid] = newItemDataSet
+                this.d = cloneDeep(this.dataArch[uid])
+                return this
+                /// this._resIndex[] < remain the same, we only updating data
+            } else {
+                return this
+            }
+        }
+
+        /**
+         * @validDataItem
+         * provide data array with `_uid` and `_ri`, will check for existence and return new data maping old item
+         * `dataRef` provide if other then `dataSet`
+         */
+        _validDataItem(newData, uid, dataRef = null) {
+            var item = []
+
+            var matched_ris = []
+            if (!this.dataArch[uid]) return null
+
+            if (newData.length !== this.dataArch[uid].length) return null
+
+            for (var i = 0; i < newData.length; i++) {
+                var itm = newData[i]
+                if (!isObject(itm) && !isArray(itm)) break
+
+                // update `item`
+                this.dataArch[uid].map(z => {
+                    if (z._uid === itm._uid && z._ri === itm._ri) {
+                        dataRef = dataRef || 'dataSet'
+                        var el = {}
+                        var anonymousKey = Object.keys(z).filter(n => {
+                            return n !== '_ri' && n !== '_uid'
+                        })
+
+                        if (anonymousKey.length === 1) {
+                            el[dataRef] = itm[head(anonymousKey)] // newData
+                            el['_ri'] = z._ri
+                            el['_uid'] = z._uid
+                        } else {
+                            if (this.debug) notify.ulog(`ups no dataSet, other then _uid/_ri are available for update!, nothing done`, true)
+                            return null
+                        }
+
+                        if (!isEmpty(el)) {
+                            // check if match our resIndex, should exist
+                            if (indexOf(this.resIndex[uid], el._ri) !== -1) {
+                                matched_ris.push(el._ri)
+                            }
+                            item.push(el)
+                        }
+                    }
+                })
+            }
+
+            var pass_ok = this.resIndex[uid].filter(z => {
+                return matched_ris.filter(n => z === n).length
+            }).filter(z => z !== undefined).length === this.resIndex[uid].length
+
+            if (pass_ok) {
+                return item
+            } else {
+                if (this.debug) notify.ulog('resIndex did not match newData', true)
+                return null
+            }
         }
 
         /**
@@ -218,17 +378,18 @@ module.exports = (notify) => {
          * - return clean data from dataSet without `_ri` and `_uid`
          * `dataRef` : provide if data does not include dataSet
          * `data` : provide data that you have worked on, should be same array index as as original
+         * `external` when provided class will not check for size validation, but format must match
          */
-        itemData(data, uid, dataRef) {
+        itemData(data, uid, dataRef, external = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
             this.valUID(uid)
-            if (!this.availRef(uid)) return null
+            if (!this.availRef(uid) && !external) return null
 
             if (isArray(data)) {
                 var validSize = data.length === this.resIndex[uid].length
-                if (!validSize) {
+                if (!validSize && !external) {
                     if (this.debug) notify.ulog(`[itemData] provided data size does nto match the size of original payload!`, true)
                     return null
                 }
@@ -250,18 +411,19 @@ module.exports = (notify) => {
          * - return formated data with `_uid` and `_ri`
          * - `uid` must already be available to format this item
          * - data will not be combined with `dataArch` chain
+         * `external` when provided class will not check for size validation, but format must match
          */
-        itemFormated(data, uid, dataRef) {
+        itemFormated(data, uid, dataRef, external = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
             this.valUID(uid)
-            if (!this.availRef(uid)) return null
+            if (!this.availRef(uid) && !external) return null
             if (!isArray(data)) throw (`you must provide an array for data!`)
 
             var validSize = data.length === this.resIndex[uid].length
 
-            if (!validSize) {
+            if (!validSize && !external) {
                 if (this.debug) notify.ulog(`[itemFormated] provided data size does nto match the size of original payload!`, true)
                 return null
             }
@@ -281,17 +443,10 @@ module.exports = (notify) => {
         }
 
         /**
-         * @finalize
-         * - `finalize` will provide only `this.dataArch` from this class, unless you provide `yourData`
-         * that originaly came thru this class
-         * - sorl all `dataArch|yourData` to return coresponding dataSet by `uid`
-         * - sets agains `resIndex` to make sure size of each payload matches the return for each dataset
-         * - delete `dataArch|yourData`[index] and `resIndex`[index]
-         * `dataRef`: example : yourData[uid][dataRef]
-         * `doDelete:boolean` provide if you want to delete this arch data and resIndex
-         * - return item
+         * @_finalize_item
+         * mothod called by finalize, to allow grouping calls
          */
-        finalize(yourData, uid, dataRef, doDelete = true) {
+        _finalize_item(yourData, uid, dataRef, doDelete = true) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
             this.valUID(uid)
@@ -316,20 +471,21 @@ module.exports = (notify) => {
 
             var providerData = isObject(yourData) && !isArray(yourData) ? yourData : this.dataArch
             providerData = cloneDeep(providerData)
-
+            // setupData
             // cycle thru each reference
             for (var k in providerData) {
                 if (!providerData.hasOwnProperty(k)) continue
 
-                var dataSet = providerData[k]
-                if (dataSet.hasOwnProperty(dataRef)) dataSet = dataSet[dataRef]
+                var itemDataSets = providerData[k]
+                if (itemDataSets.hasOwnProperty(dataRef)) itemDataSets = itemDataSets[dataRef]
 
-                if (!dataSet) {
-                    if (this.debug) notify.ulog(`dataSet not available`, true)
+                if (!itemDataSets) {
+                    if (this.debug) notify.ulog(`itemDataSets not available`, true)
                     continue
                 }
-                if (!isArray(dataSet)) throw ('provided dataSet must be an array!')
-                fData = [].concat(perDataSet(dataSet, uid), fData)
+                if (!isArray(itemDataSets)) throw ('provided itemDataSets must be an array!')
+
+                fData = [].concat(perDataSet(itemDataSets, uid), fData)
             }
 
             if (!this.resIndex[uid]) {
@@ -395,6 +551,32 @@ module.exports = (notify) => {
                 if (doDelete) this.deleteSet(uid)
                 this.reset(uid)
                 return null
+            }
+        }
+
+        /**
+         * @finalize
+         * - `finalize` will provide only `this.dataArch` from this class, unless you provide `externalData`
+         * that originaly came thru this class
+         * - sorl all `dataArch|externalData` to return coresponding dataSet by `uid`
+         * - sets agains `resIndex` to make sure size of each payload matches the return for each dataset
+         * - delete `dataArch|externalData` [index] and `resIndex`[index]
+         * `dataRef`: example : externalData[uid][dataRef]
+         * `doDelete:boolean` provide if you want to delete this arch data and resIndex
+         * `uid:String` : provide uid
+         * `uid:Array` : can provide array(..) of uids, `externalData` option not available for multi returns,
+         * - return item
+         */
+        finalize(externalData, uid, dataRef, doDelete = true) {
+            if (!externalData && isArray(uid)) {
+                var items = {}
+                for (var i = 0; i < uid.length; i++) {
+                    var d = this._finalize_item(externalData, uid[i], dataRef, doDelete)
+                    items[uid] = d
+                }
+                return d
+            } else {
+                return this._finalize_item(externalData, uid[i], dataRef, doDelete)
             }
         }
 
@@ -482,23 +664,107 @@ module.exports = (notify) => {
         }
 
         /**
+         * @testItemExistence
+         * check if item/uid exists outside in other items, then remove it and add back to correct item[uid]
+         */
+        testItemExistence(uid) {
+            if (!uid) return this
+            /**
+             * test for existence of this uid in defferent items
+             */
+            var testExistence = () => {
+                var t = this.dataArch
+                var arr = []
+                for (var k in t) {
+                    if (k === uid) continue
+                    if (!t.hasOwnProperty(k)) continue
+
+                    var other = t[k]
+                    var found = other.filter(z => {
+                        return z._uid === uid
+                    })
+
+                    if (found.length) {
+                        // delete double match from other data and keep only in relevence to uid test
+                        this.dataArch[k] = other.filter(z => {
+                            return z._uid !== uid
+                        })
+                        arr = [].concat(arr, found)
+                    }
+                }
+
+                // update model
+                if (arr.length) this.dataArch = Object.assign({}, this.dataArch)
+                return arr
+            }
+
+            var exists = testExistence()
+            // original size
+            var orgSize = this.dataArch[uid].length
+            var proposedSize = exists.length + orgSize
+            if (proposedSize > orgSize) {
+                // before adding found dataSets lets test for `_ri`, make sure all are uniq
+                var together_ris = cloneDeep([].concat(exists, this.dataArch[uid])).map(n => {
+                    return n._ri
+                })
+
+                var uniq_ok = together_ris.length === uniq(together_ris).length
+                if (!uniq_ok) {
+                    if (this.debug) notify.ulog('warning found uid dataSets in other items with few doubleups, those were ignored, only new added', true)
+                }
+
+                // add only by uniq
+                var uniq_ris = together_ris
+                var match_found = null
+                for (var i = 0; i < exists.length; i++) {
+                    var item = exists[i]
+
+                    var mch = uniq_ris.filter(z => {
+                        return z === item._ri
+                    })
+
+                    if (!mch.length) continue
+
+                    if (mch.length) {
+                        this._resIndex[uid] = [].concat(this._resIndex[uid], item._ri)
+                        this.dataArch[uid] = [].concat(this.dataArch[uid], item)
+                        match_found = true
+                        if (this.debug) notify.ulog({ message: 'updated item dataSet', _ri: item._ri })
+                    }
+                }
+                // update model
+                if (match_found) this.dataArch = Object.assign({}, this.dataArch)
+            } else {
+                //  console.log('all pass, no existence found in other dataSets')
+            }
+            return this
+        }
+
+        /**
          * @getItem
          * `uid` must provide uid
          * `_self`  optional, if set specify `getItem.d` to return items data
          */
         getItem(uid, _self) {
             this.valUID(uid)
+
+            this.d = null
+
+            // only update if data not sealed
+            if (!this.dataArchSealed[uid]) {
+                this.testItemExistence(uid)
+            }
+
             if (_self) {
                 var d = cloneDeep(this.dataArch[uid])
                 if (d) this.d = d
                 return this
             }
 
-            this.d = null
-            if (this.dataArchSealed[uid] === false && !_self) {
+            if (!_self) {
                 return cloneDeep(this.dataArch[uid])
             } else {
-                notify.ulog({ message: 'warning you cannot retrieve this items data, as it is not available', uid }, true)
+                notify.ulog({ message: '[getItem] warning you cannot retrieve this items data, as it is not available', uid }, true)
             }
             return null
         }
