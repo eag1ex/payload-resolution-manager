@@ -3,6 +3,7 @@
 * License: `CC BY` 
 
 #### Description
+- Easy to use Micro toolkit for your data handling
 - You are issuing many async calls and want to track all requests by uniq id.
 - Individual sets of data[index] that maybe worked on independently (out-of-order) will be tracked with resolution index (`_ri`).
  * `Example` You issued 20 requests, each request is 5 data sets [x5]. Because all 20 requests are issued at the same time, each will be out-of-order, we can track then with resolution index, and correctly collect data in the end.
@@ -53,12 +54,13 @@ notify.ulog({ job_1_nn: nn })
 * `setupData(data:Array,uid:String)`: Provide your request data as array (can be single array),with uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid` . You can provide concurent `setupData` for the same `uid` via chaining or by line, up to you, this item will then be updated in the class scope.
 
-* `updateDataSet(uid,newDataSet,type)` : update items dataSet targted via `_ri` together with `uid` 
-     - `newDataSet` can be any data, example: {},[],1,true, except for null
-     - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 
 * `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
 
+
+* `updateDataSet(uid,newDataSet,type)` : update item dataSet targted via `_ri` together with `uid` 
+     - `newDataSet` can be any data, example: {},[],1,true, except for null
+     - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 
 * `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
