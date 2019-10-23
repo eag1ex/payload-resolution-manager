@@ -55,7 +55,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 
 * `updateDataSet(uid,newDataSet,type)` : update items dataSet targted via `_ri` together with `uid` 
      - `newDataSet` can be any data, example: {},[],1,true, except for null
-     - `type:string`: can specify `merge` or `new` 
+     - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 
 * `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
 

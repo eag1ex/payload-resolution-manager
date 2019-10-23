@@ -70,7 +70,7 @@ for (var i = 0; i < nn.length; i++) {
 }
 resx.updateSetup(nn, uid)
 
-// update second utem via updateDataSet
+// update second item via updateDataSet
 resx.updateDataSet(uid, 1, { sex: 'any' }, 'merge')
 
 notify.ulog({ job_2_nn: resx.getItem(uid) })

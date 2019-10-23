@@ -25,6 +25,7 @@ module.exports = (notify) => {
             }
             this._lastUID = null // last updated uid
             this._lastItemData = null // last updated at `finalize` methode
+            this.singleSet = null // return only set that was updated
             this.d = null // updated via `setupData` methode
             // once all data for each payload resolution is set to be worked on, we mark it as true
             // grab last data returned by `setupData`
@@ -576,7 +577,10 @@ module.exports = (notify) => {
                 }
                 return d
             } else {
-                return this._finalize_item(externalData, uid[i], dataRef, doDelete)
+                if (!uid) uid = this._lastUID
+                else this._lastUID = uid
+                this.valUID(uid)
+                return this._finalize_item(externalData, uid, dataRef, doDelete)
             }
         }
 
@@ -794,7 +798,11 @@ module.exports = (notify) => {
 
             if (this.dataArch[_uid]) {
                 this.dataArch[_uid] = [].concat(this.dataArch[_uid], emptySet)
-            } else this.dataArch[_uid] = [{ dataSet: [], _ri: nextRI, _uid }]
+                this.singleSet = emptySet
+            } else {
+                this.singleSet = emptySet
+                this.dataArch[_uid] = emptySet
+            }
 
             if (this.resIndex[_uid]) this.resIndex[_uid] = [].concat(this.resIndex[_uid], emptySet[0]._ri)
             else this.resIndex[_uid] = [emptySet[0]._ri]
@@ -822,7 +830,7 @@ module.exports = (notify) => {
                 notify.ulog({ message: 'warning you cannot reset/update data of same uid if has already been marked, nothing done for this payload', uid: _uid }, true)
                 return this
             }
-
+            this.singleSet = null
             if (isEmpty(data)) {
                 return this.setEmptyArch(_uid)
             }
@@ -841,6 +849,8 @@ module.exports = (notify) => {
             if (this.dataArch[_uid]) {
                 this.dataArch[_uid] = [].concat(this.dataArch[_uid], setReady)
             } else this.dataArch[_uid] = setReady
+
+            this.singleSet = setReady
 
             // NOTE update `resIndex` Object for later checks
             var irs = setReady.map(z => z._ri)
