@@ -42,7 +42,7 @@ var nn = resx.setupData(d1, uid)
         return item
     }, null, 'each') // we ignored `uid:null` since we are chaining only one job
     // if we provided `index11` internal value will change, need to specify what to finalize!
-// .markDone(/*uid */) // will ignore setupData for uid:index12 from future updates
+// .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
     .setupData(d4)
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
