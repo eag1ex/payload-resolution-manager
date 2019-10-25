@@ -23,7 +23,7 @@ var uid = 'job_1'
 var d1 = [{ name: 'alex', age: 20 }] // _ri = 0
 var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 1,2
 var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 3,4,5
-var d4 = ['a', null, false] // _ri = 6
+var d4 = ['a', null, false] // _ri = 6, 7, 8
 
 var nn = resx.setupData(d1, uid)
     .setupData(d2)
