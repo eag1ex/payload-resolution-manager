@@ -6,7 +6,8 @@ npm-debug.log
 *.dev
 .DS_Store
 dist
-
+public
+md_test.js
 # Docker
 Dockerfile
 docker-compose.yml
