@@ -39,24 +39,22 @@ var nn = resx.setupData(d1, uid)
 
         // if (item._ri===0) // do something
         item.dataSet.age += 20
+        item.dataSet.status = 'single'
         return item
     }, null, 'each') // we ignored `uid:null` since we are chaining only one job
     // if we provided `index11` internal value will change, need to specify what to finalize!
-// .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
-    .setupData(d4)
+    .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
+    .setupData(d4) // ignored
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
 notify.ulog({ job_1_nn: nn })
 // returns:
-// [ { name: 'alex', age: 40 },
-//      { name: 'daniel', age: 75 },
-//      { name: 'john', age: 64 },
-//      { name: 'max', age: 64 },
-//      { name: 'smith', age: 86 },
-//      { name: 'jane', age: 55 },
-//      'a',
-//      null,
-//      false ]
+// [ { name: 'alex', age: 40, status: 'single' },
+//      { name: 'daniel', age: 75, status: 'single' },
+//      { name: 'john', age: 64, status: 'single' },
+//      { name: 'max', age: 64, status: 'single' },
+//      { name: 'smith', age: 86, status: 'single' },
+//      { name: 'jane', age: 55, status: 'single' } ] }
 
 /// update  example
 var uid = 'job_2'
