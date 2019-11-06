@@ -300,18 +300,19 @@ module.exports = (notify) => {
                             var ri = itm['_ri']
                             var valid_dataItem = this.dataArch[uid][ri]
                             if (!valid_dataItem) {
-                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${uid} does not exist` }, true)
+                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${uid} does not exist, item kept original` }, true)
 
-                                itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
-                                return itm
+                                // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+
+                                return z
                             }
                             if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
                                 return itm
                             } else {
-                                if (this.debug) notify.ulog({ message: `[computation] matching error`, uid }, true)
+                                if (this.debug) notify.ulog({ message: `[computation] matching error, item kept original`, uid }, true)
 
-                                itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
-                                return itm
+                                // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+                                return z
                             }
                         }).filter(n => !!n)
                         return n
@@ -352,9 +353,16 @@ module.exports = (notify) => {
                     }// for each
 
                     delete this.grab_ref[uid]
-
+                    updateData = flatMap(updateData) // in case you passed [[]] :)
                     if (updateData) {
-                        this.dataArch[uid] = flatMap(updateData) // in case you passed [[]] :)
+                        /// update only those which match ri to previously declared sets!
+                        for (var i = 0; i < updateData.length; i++) {
+                            var updItem = updateData[i]
+                            var ri = updItem._ri
+                            if (this.dataArch[uid][ri]) {
+                                this.dataArch[uid][ri] = updItem
+                            }
+                        }
                         this.dataArch = Object.assign({}, this.dataArch)
                     }
                 }
