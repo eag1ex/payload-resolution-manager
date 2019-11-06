@@ -360,7 +360,9 @@ module.exports = (notify) => {
                             var updItem = updateData[i]
                             var ri = updItem._ri
                             if (this.dataArch[uid][ri]) {
-                                this.dataArch[uid][ri] = updItem
+                                if (this.dataArch[uid][ri]._uid === uid) {
+                                    this.dataArch[uid][ri] = updItem
+                                }
                             }
                         }
                         this.dataArch = Object.assign({}, this.dataArch)
