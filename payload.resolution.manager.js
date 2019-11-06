@@ -20,7 +20,7 @@ module.exports = (notify) => {
                 // NOTE
                 // [uid]:[...] payload data set each `data` is appended `_ri` < `Resolution Index`
                 /**
-                 * example: [uid]:[{dataSet, _uid, _ri},...]
+                 * example: [uid]:[{dataSet, _uid, _ri, _timestamp},...]
                  */
             }
             this._lastUID = null // last updated uid
@@ -33,6 +33,23 @@ module.exports = (notify) => {
                 // uid > this.d
             }
             this.dataArchSealed = {}
+        }
+
+        timestamp() {
+            return new Date().getTime()
+        }
+
+        /**
+         * @getUIDS
+         * return all uid keys accending, by first data update, or set change
+         */
+        getUIDS() {
+            var uids = Object.keys(this.dataArch).map(z => head(this.dataArch[z])).sort((a, b) => {
+                return Number(a._timestamp) - Number(b._timestamp)
+            }).map(z => z._uid)
+
+            if (isEmpty(uids)) return null
+            else return uids
         }
 
         /**
@@ -179,8 +196,10 @@ module.exports = (notify) => {
             var matched_ris = []
             if (!this.dataArch[uid]) return null
 
-            if (newData.length !== this.dataArch[uid].length) return null
-
+            if (newData.length !== this.dataArch[uid].length) {
+                console.log('new d wrong len', newData)
+                return null
+            }
             for (var i = 0; i < newData.length; i++) {
                 var itm = newData[i]
                 if (!isObject(itm) && !isArray(itm)) break
@@ -191,13 +210,14 @@ module.exports = (notify) => {
                         dataRef = dataRef || 'dataSet'
                         var el = {}
                         var anonymousKey = Object.keys(z).filter(n => {
-                            return n !== '_ri' && n !== '_uid'
+                            return n !== '_ri' && n !== '_uid' && n !== '_timestamp'
                         })
 
                         if (anonymousKey.length === 1) {
                             el[dataRef] = itm[head(anonymousKey)] // newData
                             el['_ri'] = z._ri
                             el['_uid'] = z._uid
+                            el['_timestamp'] = z._timestamp
                         } else {
                             if (this.debug) notify.ulog(`ups no dataSet, other then _uid/_ri are available for update!, nothing done`, true)
                             return null
@@ -247,19 +267,20 @@ module.exports = (notify) => {
                 if (this.grab_ref[uid]) {
                     var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
-                        return items.map((z, i) => {
+                        var n = items.map((z, i) => {
                             var itm = {}
                             if (inx !== null) i = inx // when for `each` index need to come from external loop
                             if (isObject(z) && !isArray(z)) {
                                 itm['_ri'] = z._ri !== undefined ? z._ri : i
                                 itm['_uid'] = z._uid || uid
+                                itm['_timestamp'] = this.timestamp() // set new time
                                 if (!z.dataSet) {
                                     if (this.debug) notify.ulog(`[computation] .dataSet must be set for all user values or it will return null`)
                                 }
                                 itm['dataSet'] = z.dataSet || null
-                                if (Object.keys(z).length > 3) {
+                                if (Object.keys(z).length > 4) {
                                     var ignored = Object.keys(z).filter(n => {
-                                        return n !== '_ri' && n !== '_uid' && n !== 'dataSet'
+                                        return n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp'
                                     })
                                     if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
                                     times(ignored.length, (i) => {
@@ -271,10 +292,29 @@ module.exports = (notify) => {
                             } else {
                                 itm['_ri'] = i
                                 itm['_uid'] = uid
+                                itm['_timestamp'] = this.timestamp()
                                 itm['dataSet'] = z || null
                             }
-                            return itm
+
+                            /// validate `_ri` and `uid`
+                            var ri = itm['_ri']
+                            var valid_dataItem = this.dataArch[uid][ri]
+                            if (!valid_dataItem) {
+                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${uid} does not exist` }, true)
+
+                                itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+                                return itm
+                            }
+                            if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
+                                return itm
+                            } else {
+                                if (this.debug) notify.ulog({ message: `[computation] matching error`, uid }, true)
+
+                                itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+                                return itm
+                            }
                         }).filter(n => !!n)
+                        return n
                     }
 
                     var updateData
@@ -289,6 +329,12 @@ module.exports = (notify) => {
                         }
 
                         updateData = itemUpdated(updated)
+
+                        // NOTE when computing make sure provided data matches our `_ri` and `_uid`                   /// validate `_ri && _uid`
+                        var valid = this._validDataItem(updateData, uid)
+                        if (!valid) {
+                            if (this.debug) notify.ulog({ message: 'computation all option did not match all dataSets correctly, either uid length or ri are wrong' }, true)
+                        }
                     } // for all
 
                     if (method === 'each') {
@@ -438,6 +484,7 @@ module.exports = (notify) => {
                 o[df] = dataSet
                 o['_ri'] = i
                 o['_uid'] = uid
+                o['_timestamp'] = this.timestamp()
                 setReady.push(o)
             }
             return setReady
@@ -531,7 +578,8 @@ module.exports = (notify) => {
                         anonymousKey = head(anonymousKey.filter(z => {
                             var not_uid = z !== '_uid'
                             var not_ri = z !== '_ri'
-                            return not_uid && not_ri
+                            var not_timestemp = z !== '_timestamp'
+                            return not_uid && not_ri && not_timestemp
                         }))
 
                         var itm = fData[n][anonymousKey]
@@ -626,6 +674,10 @@ module.exports = (notify) => {
                         }
                         if (!isString((z || {})._uid)) {
                             console.log('err not string')
+                            err_format = k
+                        }
+                        if (!isNumber((z || {})._timestamp)) {
+                            console.log('err not number')
                             err_format = k
                         }
                     })
@@ -794,7 +846,7 @@ module.exports = (notify) => {
             this.valUID(_uid)
             var inx = this.nextRI(_uid)
             var nextRI = inx > 0 ? inx + 1 : 0
-            var emptySet = [{ dataSet: [], _ri: nextRI, _uid }]
+            var emptySet = [{ dataSet: [], _ri: nextRI, _uid, _timestamp: this.timestamp() }]
 
             if (this.dataArch[_uid]) {
                 this.dataArch[_uid] = [].concat(this.dataArch[_uid], emptySet)
@@ -843,7 +895,7 @@ module.exports = (notify) => {
                 // make sure `ri` is incremented and not repeated!
                 var inx = last_ri === null ? i : last_ri = last_ri + 1
 
-                setReady.push({ dataSet: dataSet, _ri: inx, _uid })
+                setReady.push({ dataSet: dataSet, _ri: inx, _uid, _timestamp: this.timestamp() })
             }
 
             if (this.dataArch[_uid]) {

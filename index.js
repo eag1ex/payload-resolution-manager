@@ -38,6 +38,7 @@ var nn = resx.setupData(d1, uid)
         // NOTE do some calculation for `each` item, must return 1 item
 
         // if (item._ri===0) // do something
+       
         item.dataSet.age += 20
         item.dataSet.status = 'single'
         return item
@@ -72,7 +73,7 @@ resx.updateSetup(nn, uid)
 // update second item via updateDataSet
 resx.updateDataSet(uid, 1, { sex: 'any' }, 'merge')
 notify.ulog({ job_2_nn: resx.getItem(uid) })
-
+notify.ulog({ uid_list: resx.getUIDS()})
 // example 1
 // var uid = 'index1'
 // var a = resx.setupData(exampleData(2), uid).d
