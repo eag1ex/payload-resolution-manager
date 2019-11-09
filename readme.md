@@ -35,7 +35,7 @@ var nn = resx.setupData(d1, uid)
         // if (item._ri===0) // do something
         item.dataSet.age += 20
         return item
-    }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+    }, 'each',null) // we ignored `uid:null` since we are chaining only one job
     // if we provided `index11` internal value will change, need to specify what to finalize!
 // .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
     .setupData(d4)
@@ -50,21 +50,27 @@ notify.ulog({ job_1_nn: nn })
 * `data[...]`: Every job you provide must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
 * `setupData(data:Array,uid:String)`: Provide your request data as array (can be single array),with uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid` . You can provide concurent `setupData` for the same `uid` via chaining or by line, up to you, this item will then be updated in the class scope.
+
 * `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
+
 * `updateDataSet(uid,newDataSet,type)` : update item dataSet targted via `_ri` together with `uid` 
      - `newDataSet` can be any data, example: {},[],1,true, except for null
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 * `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
+
 * `finalize(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
      - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
      - `dataRef` your data is from external source:yourData, you have the option to provide `dataRef` if its other then `dataSet`
      - `doDelete:true` will always delete the job from class cache after its finilized, you have the option not to delete it! 
-* `computation(callback(), uid, method='all')`: use this method to perform data calculation for each `uid`.
-     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` then will loop thru each item sequently, you must return only 1 item. 
-     - `uid`: must provide uid for data if not chaining. If you set `uid`=null it will look for last used uid
+* `computation(callback(), method='all',uid)`: use this method to perform data calculation for each `uid`.
+     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` will loop thru each item sequently,  must return 1 item. If you do not know your uid and want to use `each` methog, you must set `this.itemDataSet` to update callback, for more clear explenation, take a look at `index.js` examples
+     - `uid`: provide uid for data if not chaining. When `uid`=null, will look for last used uid, when uid is anonymous  because data was returned radomly, must provide dataSet format wrapped with {dataSet[],_uid,_ri} so method can search thru it and match available uid's 
+
 * `getItem(uid,self:boolean)`:  return data for desired `uid` in raw state, with `_uid`, `_ri` and `dataSet`.
      - `self`: when provided you can chain this method. To return, you must provide: getItem(...).d (if self is set:true)
-* `itemFormated(data[...], uid)` : for some reason you want to make sure your data is correct and return clean unformated state. Provide data[...] in same size as previously initialized with `setupData`. Method does not update or change any internal states.
+
+* `itemFormated(data[...], uid)` : for some reason you want to make sure your data is correct and return clean unformated state. Provide data[...] in same as previously initialized with `setupData`. Method does not update or change any internal states.
+
 * `deleteSet(uid, force:true)`: you require some hacking, manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 

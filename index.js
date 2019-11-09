@@ -21,7 +21,6 @@ var exampleData = (id = 0) => {
 }
 
 // NOTE base chaining example
-
 // make sure that you update your `uid` when doing concurent chain with different `uid`
 var uid = 'job_1'
 
@@ -36,18 +35,18 @@ var nn = resx.setupData(d1, uid)
 // .setupData(exampleData(5), 'index11')
     .computation(item => {
         // NOTE do some calculation for `each` item, must return 1 item
-
         // if (item._ri===0) // do something
         item.dataSet.age += 20
         item.dataSet.status = 'single'
         return item
-    }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+    },'each') // we ignored `uid:null` since we are chaining only one job
     // if we provided `index11` internal value will change, need to specify what to finalize!
     .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
     .setupData(d4) // ignored
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
 notify.ulog({ job_1_nn: nn })
+
 // returns:
 // [ { name: 'alex', age: 40, status: 'single' },
 //      { name: 'daniel', age: 75, status: 'single' },
@@ -56,7 +55,40 @@ notify.ulog({ job_1_nn: nn })
 //      { name: 'smith', age: 86, status: 'single' },
 //      { name: 'jane', age: 55, status: 'single' } ] }
 
-/// update  example
+
+
+// NOTE partial chaining example with anonymous `uid` and `each` callback
+var uid = 'job_1a'
+var nn = resx.setupData(d1, uid)
+resx.setupData(d2)
+    .setupData(d3)
+
+var nn2= nn.computation(item => {
+
+        /**
+         * NOTE 
+         *  to allow query without job `uid`, we set `this.itemDataSet=[{dataSet, _uid,_ri},...]`
+         *  it will anonymously search each items _uid and make valid updates in our scope
+         *  at the same time... Now that we know what each itemDataSet is, on `each` callback we can make further changes, whala!
+         *  resx.itemDataSet = nn.d
+         */
+        resx.itemDataSet = nn.d
+
+        // NOTE do some calculation for `each` item, must return 1 item
+        // if (item._ri===0) // do something
+        item.dataSet.age += 20
+        item.dataSet.status = 'single'
+        return item
+    }, 'each',false) /// anonymous uid
+    // if we provided `index11` internal value will change, need to specify what to finalize!
+    .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
+    .setupData(d4) // ignored
+    .finalize(null,uid)
+    // .finalize(/** customData, `index11`, doDelete=true */)
+notify.ulog({ job_1a_nn: nn2 })
+
+
+/// update  example 
 var uid = 'job_2'
 var dd = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri= 0,1
 
@@ -93,7 +125,7 @@ notify.ulog({ uid_list: resx.getUIDS()})
 //     // NOTE do some calculation, must pass same array size as initial data
 //     item = [[], [], [], [], [], ['abc']]
 //     return item
-// }, uid)
+// }, 'all',uid)
 // // updated value for `index5`
 // var updated = resx.getItem(uid, true).d
 // notify.ulog({ updated }) // return latest update from computation before calling finalize
@@ -112,7 +144,7 @@ notify.ulog({ uid_list: resx.getUIDS()})
 // //     // NOTE with `each` option callback runs thru each item, you must return 1 item
 // //     //  item.dataSet.age += 20
 // //     return item
-// // }, uid, 'each')
+// // }, 'each',uid)
 // // updated value for `index5`
 // var updated = resx.getItem(uid, true).d
 // notify.ulog({ updated }) // return latest update from computation before calling finalize
@@ -169,7 +201,7 @@ notify.ulog({ uid_list: resx.getUIDS()})
 //         // NOTE do some calculation, must pass same array size as initial data
 //         // item = [[], [], [], [], [], [], [], []]
 //         return item
-//     }/** ,uid */)
+//     },'all',/** ,uid */)
 
 //     // set doDelete=false if you do not wish to delete you data from the arch
 //     .finalize(/** customData, `index9`, doDelete=true */)
@@ -188,7 +220,7 @@ notify.ulog({ uid_list: resx.getUIDS()})
 //         // NOTE do some calculation for `each` item, must return 1 item
 //         item.dataSet.age += 20
 //         return item
-//     }, null, 'each') // we ignored `uid:null` since we are chaining only one job
+//     }, 'each',null) // we ignored `uid:null` since we are chaining only one job
 //     // if we provided `index11` internal value will change, need to specify what to finalize!
 //     // .markDone(/*uid*/) // will ignore setupData for uid:index10 from future updates
 //     .setupData(exampleData(5))

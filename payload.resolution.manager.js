@@ -62,7 +62,8 @@ module.exports = (notify) => {
          * @valUID
          * - validate uid make sure is good
          */
-        valUID(uid) {
+        valUID(uid, ignore = null) {
+            if (ignore) return this
             if (!uid) throw ('must provide uid!')
             if (!isString(uid)) throw ('uid must be a string')
             if (uid.length < 2) throw ('uid must be longer then 1')
@@ -252,30 +253,72 @@ module.exports = (notify) => {
             }
         }
 
+        get itemDataSet() {
+            return this._itemDataSet
+        }
+
+        /**
+         * @itemDataSet
+         * for use with computation for `each` callback when uid===false or not provided
+         * must return an array of item/s with valid `dataSet`, `_ri` and `_uid`
+         */
+        set itemDataSet(v) {
+            if (v === null) return
+
+            if (!isArray(v)) {
+                if (this.debug) notify.ulog('itemDataSet must be an array', true)
+                return
+            }
+
+            var validData = v.filter(z => {
+                var uid = z._uid
+                var ri = z._ri
+                if (this.dataArch[uid]) {
+                    var mch = this.dataArch[uid].filter(n => {
+                        if (n._uid === uid && ri === n._ri) {
+                            return true
+                        }
+                    })
+                    return mch.length
+                }
+                return false
+            })
+            if (validData.length) {
+                this._itemDataSet = validData
+                if (this._itemDataSet.length !== v.length) {
+                    if (this._dataArch.debug) notify.ulog({ message: 'some items in dataSet provided were not valid, not all were updated', validSize: this._itemDataSet.length })
+                }
+            } else {
+                if (this.debug) notify.ulog('no valid data to update using itemDataSet, possibly your uids and/or ris do not match items in our scope', true)
+            }
+        }
+
         /**
          * @computation
          * - do custom computation and return the value, will update this item on finalize
          * `callback` cann access item data to munipulate, must return same array size
          * `uid` if set null will try to use last available, if not found and `uid:false` instead of null > computation will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with initally provided in `setupData`
          * `method` there are 2 types: `each` and `all` as the name suggests callback will be performend on every item[x] or only once for all
+         * `itemDataSet:` when we want to use `each` callback when uid===false, we need to update dataSet first, to be able to loop thru it later.
          */
-        computation(cb, uid, method = 'all') {
+        computation(cb, method = 'all', uid) {
             if (!uid && uid !== false) uid = this._lastUID
             else if (uid !== false) this._lastUID = uid
             if (uid !== false) this.valUID(uid)
+            if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
 
             if (this.dataArchSealed[uid] && uid !== false) {
                 if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothung changed!`, true)
                 return this
             }
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
-
-            var cb_sandbox = (updatedData) => {
+            this.itemDataSet = null
+            var cb_sandbox = (updatedData, skipIndex = null) => {
                 var updated = null
                 try {
                     updated = cb(updatedData)
                 } catch (err) {
-                    if (this.debug) notify.ulog({ errro: err, message: no_uid_no_item.message }, true)
+                    if (this.debug && skipIndex !== null) notify.ulog({ errro: err, message: no_uid_no_item.message }, true)
                 }
                 return updated
             }
@@ -367,7 +410,6 @@ module.exports = (notify) => {
                     if (method === 'all') {
                         // NOTE call back should return new data as an array
                         var updatedData = this.grab_ref[uid] || no_uid_no_item
-
                         var updated = cb_sandbox(updatedData)
 
                         if (isArray(updateData)) {
@@ -386,10 +428,14 @@ module.exports = (notify) => {
                         }
                     } // for all
 
-                    if (method === 'each' && uid !== false) {
-                        updateData = this.grab_ref[uid].map((z, i) => {
+                    var loopEach = (skipINX) => {
+                        var initialData = (this.grab_ref[uid] || this.itemDataSet) || []
+
+                        return initialData.map((z, i) => {
+                            // means we are skipping callback for this index
+                            if (skipINX === i) return null
                             // do for each callback
-                            var u = cb_sandbox(z)
+                            var u = cb_sandbox(z, skipINX)
                             if (u) u = flatMap([u])
 
                             if (u.length > 1 || !isArray(u)) {
@@ -398,17 +444,32 @@ module.exports = (notify) => {
                             }
                             var dd = itemUpdated(u, i)
                             return head(dd)
-                        })
+                        }).filter(z => !!z)
+                    }
+
+                    if (method === 'each' && uid !== false) {
+                        updateData = loopEach()
                     } else if (method === 'each' && uid === false) {
-                        var u = cb_sandbox(no_uid_no_item)
+                        // NOTE
+                        /*
+                         when uid is not provided the only way to loop callback with `each` is to
+                         findout what the total array is by initially updating with `itemDataSet`
+                         will also throw silent error if try to update item index 0 in callback when  itemDataSet was not yet set
+                        */
+                        var u = cb_sandbox(no_uid_no_item) // required to get our itemDataSet
                         if (u) u = flatMap([u])
 
-                        if (((u || []).length > 1 || !isArray(u)) && uid !== false) {
-                            notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
-                            //   return null
+                        // after first callback var should be updated
+                        if (this.itemDataSet) {
+                            var u2
+
+                            if (u) u2 = loopEach(0)// skipping first
+                            else u2 = loopEach() // call again, posibly because we try update local dataSet that is non existant
+
+                            updateData = [].concat(u, u2).filter(z => !!z) // add up 0 index from initial callback
                         } else {
-                            var dd = itemUpdated(u)
-                            if (dd) updateData = head(dd)
+                            notify.ulog(`uid was undefind for use of 'each' you must set itemDataSet=data[..] to update each callback to work`, true)
+                            return this
                         }
                     }
 
@@ -459,6 +520,7 @@ module.exports = (notify) => {
             delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
             this._lastUID = null
+            this.itemDataSet = null
             this.d = null
             return this
         }
