@@ -59,11 +59,11 @@ notify.ulog({ job_1_nn: nn })
 
 // NOTE partial chaining example with anonymous `uid` and `each` callback
 var uid = 'job_1a'
-var nn = resx.setupData(d1, uid)
-resx.setupData(d2)
-    .setupData(d3)
+var nn = resx.setupData(d1, uid) // add
+resx.setupData(d2) // add
+    .setupData(d3) // add
 
-var nn2= nn.computation(item => {
+var nn2= resx.computation(item => { // compute so far
 
         /**
          * NOTE 
