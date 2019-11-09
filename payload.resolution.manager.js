@@ -295,11 +295,11 @@ module.exports = (notify) => {
 
         /**
          * @computation
-         * - do custom computation and return the value, will update this item on finalize
-         * `callback` cann access item data to munipulate, must return same array size
-         * `uid` if set null will try to use last available, if not found and `uid:false` instead of null > computation will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with initally provided in `setupData`
-         * `method` there are 2 types: `each` and `all` as the name suggests callback will be performend on every item[x] or only once for all
-         * `itemDataSet:` when we want to use `each` callback when uid===false, we need to update dataSet first, to be able to loop thru it later.
+         * - do custom computation and update each data in realtime uppon finalize and return
+         * `callback` can access item data to munipulate, must return same array size
+         * `uid` if set null will try to use last available, if uid is still undefind >computation will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with provided in `setupData`
+         * `method` there are 2 types: `each` and `all` as name suggests callback will be performend on every item[x] or only once for all
+         * `itemDataSet:` when we want to use `each` callback when `uid` is anonymous/unset, we need to update dataSet first, to be able to loop thru it later.
          */
         computation(cb, method = 'all', uid) {
             if (!uid && uid !== false) uid = this._lastUID
@@ -313,6 +313,8 @@ module.exports = (notify) => {
             }
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
             this.itemDataSet = null
+
+            // catch all callback error handling thru here
             var cb_sandbox = (updatedData, skipIndex = null) => {
                 var updated = null
                 try {
@@ -328,6 +330,10 @@ module.exports = (notify) => {
                 if (this.grab_ref[uid] || uid === false) {
                     var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
+                        if (typeof items === 'function') {
+                            if (this.debug) notify.ulog('returnin a pormise is not yet supported, nothing updated', true)
+                            return null
+                        }
                         if (!items) {
                             if (this.debug) notify.ulog({ message: no_uid_no_item.message }, true)
                             return null
@@ -341,6 +347,11 @@ module.exports = (notify) => {
                         }
 
                         var n = (items || []).map((z, i) => {
+                            if (typeof z === 'function') {
+                                if (this.debug) notify.ulog(`returnin a pormise is not yet supported, nothing updated for index ${i}`, true)
+                                return null
+                            }
+
                             var itm = {}
                             if (inx !== null) i = inx // when for `each` index need to come from external loop
                             if (isObject(z) && !isArray(z)) {
