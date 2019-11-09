@@ -9,8 +9,14 @@ module.exports = (notify) => {
     const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times } = require('lodash')
 
     class PayloadResolutioManager {
-        constructor(debug) {
+        constructor(debug, opts = {}) {
             // resolution index
+
+            // NOTE
+            // if `hard` is set any invalid dataSet will be unset
+            // if `soft` is set original dataSet will be kept
+            this.invalidType = opts.invalid || 'soft' // `soft` or `hard`
+
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
 
@@ -250,24 +256,48 @@ module.exports = (notify) => {
          * @computation
          * - do custom computation and return the value, will update this item on finalize
          * `callback` cann access item data to munipulate, must return same array size
-         * `uid` if uid is not provided will try to use last available
+         * `uid` if set null will try to use last available, if not found and `uid:false` instead of null > computation will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with initally provided in `setupData`
          * `method` there are 2 types: `each` and `all` as the name suggests callback will be performend on every item[x] or only once for all
          */
         computation(cb, uid, method = 'all') {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
-            this.valUID(uid)
+            if (!uid && uid !== false) uid = this._lastUID
+            else if (uid !== false) this._lastUID = uid
+            if (uid !== false) this.valUID(uid)
 
-            if (this.dataArchSealed[uid]) {
+            if (this.dataArchSealed[uid] && uid !== false) {
                 if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothung changed!`, true)
                 return this
             }
+            var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
+
+            var cb_sandbox = (updatedData) => {
+                var updated = null
+                try {
+                    updated = cb(updatedData)
+                } catch (err) {
+                    if (this.debug) notify.ulog({ errro: err, message: no_uid_no_item.message }, true)
+                }
+                return updated
+            }
 
             if (typeof cb === 'function') {
-                if (this.grab_ref[uid]) {
+                // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
+                if (this.grab_ref[uid] || uid === false) {
                     var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
-                        var n = items.map((z, i) => {
+                        if (!items) {
+                            if (this.debug) notify.ulog({ message: no_uid_no_item.message }, true)
+                            return null
+                        }
+
+                        if (!isArray(items)) {
+                            if (items.message) {
+                                if (this.debug) notify.ulog({ message: items.message }, true)
+                                return null
+                            }
+                        }
+
+                        var n = (items || []).map((z, i) => {
                             var itm = {}
                             if (inx !== null) i = inx // when for `each` index need to come from external loop
                             if (isObject(z) && !isArray(z)) {
@@ -291,26 +321,41 @@ module.exports = (notify) => {
                                 }
                             } else {
                                 itm['_ri'] = i
-                                itm['_uid'] = uid
+                                if (uid) itm['_uid'] = uid
                                 itm['_timestamp'] = this.timestamp()
                                 itm['dataSet'] = z || null
                             }
 
                             /// validate `_ri` and `uid`
                             var ri = itm['_ri']
-                            var valid_dataItem = this.dataArch[uid][ri]
+                            var _uid = uid === false ? itm['_uid'] : uid
+
+                            var valid_dataItem = _uid ? this.dataArch[_uid][ri] : false
+
+                            if (!valid_dataItem && uid === false) {
+                                if (this.debug) notify.ulog({ message: `[computation] we could not find any available uid for this index ${i}, changes omited` }, true)
+                                if (this.invalidType === 'hard') {
+                                    z.dataSet = null
+                                }
+                                return z
+                            }
                             if (!valid_dataItem) {
-                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${uid} does not exist, item kept original` }, true)
+                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${_uid} does not exist, changes omited` }, true)
 
                                 // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
-
+                                if (this.invalidType === 'hard') {
+                                    z.dataSet = null
+                                }
                                 return z
                             }
                             if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
                                 return itm
                             } else {
-                                if (this.debug) notify.ulog({ message: `[computation] matching error, item kept original`, uid }, true)
+                                if (this.debug) notify.ulog({ message: `[computation] matching error, changes omited`, uid }, true)
 
+                                if (this.invalidType === 'hard') {
+                                    z.dataSet = null
+                                }
                                 // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
                                 return z
                             }
@@ -320,11 +365,14 @@ module.exports = (notify) => {
 
                     var updateData
                     if (method === 'all') {
-                        var updated = cb(this.grab_ref[uid])
+                        // NOTE call back should return new data as an array
+                        var updatedData = this.grab_ref[uid] || no_uid_no_item
+
+                        var updated = cb_sandbox(updatedData)
 
                         if (isArray(updateData)) {
                             if (updateData.length !== this.resIndex[uid].length) {
-                                notify.ulog('[computation], nothing updated, callback item does not match initial data size')
+                                if (this.debug) notify.ulog('[computation], nothing updated, callback item does not match initial data size')
                                 return this
                             }
                         }
@@ -338,10 +386,11 @@ module.exports = (notify) => {
                         }
                     } // for all
 
-                    if (method === 'each') {
+                    if (method === 'each' && uid !== false) {
                         updateData = this.grab_ref[uid].map((z, i) => {
                             // do for each callback
-                            var u = flatMap([cb(z)])
+                            var u = cb_sandbox(z)
+                            if (u) u = flatMap([u])
 
                             if (u.length > 1 || !isArray(u)) {
                                 notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
@@ -350,18 +399,31 @@ module.exports = (notify) => {
                             var dd = itemUpdated(u, i)
                             return head(dd)
                         })
-                    }// for each
+                    } else if (method === 'each' && uid === false) {
+                        var u = cb_sandbox(no_uid_no_item)
+                        if (u) u = flatMap([u])
 
-                    delete this.grab_ref[uid]
-                    updateData = flatMap(updateData) // in case you passed [[]] :)
-                    if (updateData) {
+                        if (((u || []).length > 1 || !isArray(u)) && uid !== false) {
+                            notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
+                            //   return null
+                        } else {
+                            var dd = itemUpdated(u)
+                            if (dd) updateData = head(dd)
+                        }
+                    }
+
+                    if (uid) delete this.grab_ref[uid]
+                    if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
+
+                    if ((updateData || []).length) {
                         /// update only those which match ri to previously declared sets!
                         for (var i = 0; i < updateData.length; i++) {
                             var updItem = updateData[i]
+                            var _uid = uid === false ? updItem._uid : uid
                             var ri = updItem._ri
-                            if (this.dataArch[uid][ri]) {
-                                if (this.dataArch[uid][ri]._uid === uid) {
-                                    this.dataArch[uid][ri] = updItem
+                            if (this.dataArch[_uid][ri]) {
+                                if (this.dataArch[_uid][ri]._uid === _uid) {
+                                    this.dataArch[_uid][ri] = updItem
                                 }
                             }
                         }

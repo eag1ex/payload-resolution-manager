@@ -38,7 +38,6 @@ var nn = resx.setupData(d1, uid)
         // NOTE do some calculation for `each` item, must return 1 item
 
         // if (item._ri===0) // do something
-     
         item.dataSet.age += 20
         item.dataSet.status = 'single'
         return item
