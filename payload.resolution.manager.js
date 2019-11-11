@@ -6,7 +6,7 @@
  */
 
 module.exports = (notify) => {
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
     class PayloadResolutioManager {
         constructor(debug, opts = {}) {
@@ -29,6 +29,8 @@ module.exports = (notify) => {
                  * example: [uid]:[{dataSet, _uid, _ri, _timestamp},...]
                  */
             }
+
+            this._uidsetting = {} // user defind setting updated via `costumization` method
             this._lastUID = null // last updated uid
             this._lastItemData = null // last updated at `finalize` methode
             this.singleSet = null // return only set that was updated
@@ -216,14 +218,16 @@ module.exports = (notify) => {
                     if (z._uid === itm._uid && z._ri === itm._ri) {
                         dataRef = dataRef || 'dataSet'
                         var el = {}
+
                         var anonymousKey = Object.keys(z).filter(n => {
-                            return n !== '_ri' && n !== '_uid' && n !== '_timestamp'
+                            return n !== '_ri' && n !== '_uid' && n !== '_timestamp' && n !== 'complete'
                         })
 
                         if (anonymousKey.length === 1) {
                             el[dataRef] = itm[head(anonymousKey)] // newData
                             el['_ri'] = z._ri
                             el['_uid'] = z._uid
+                            if (z.complete !== undefined) el['complete'] = z.complete
                             el['_timestamp'] = z._timestamp
                         } else {
                             if (this.debug) notify.ulog(`ups no dataSet, other then _uid/_ri are available for update!, nothing done`, true)
@@ -358,15 +362,21 @@ module.exports = (notify) => {
                                 itm['_ri'] = z._ri !== undefined ? z._ri : i
                                 itm['_uid'] = z._uid || uid
                                 itm['_timestamp'] = this.timestamp() // set new time
+                                if (z.complete !== undefined) itm['complete'] = z.complete
+
                                 if (!z.dataSet) {
                                     if (this.debug) notify.ulog(`[computation] .dataSet must be set for all user values or it will return null`)
                                 }
+
                                 itm['dataSet'] = z.dataSet || null
                                 if (Object.keys(z).length > 4) {
                                     var ignored = Object.keys(z).filter(n => {
-                                        return n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp'
+                                        var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
+                                        return vld
                                     })
-                                    if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                    if (ignored.length) {
+                                        if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                    }
                                     times(ignored.length, (i) => {
                                         var del = ignored[i]
                                         delete z[del]
@@ -505,6 +515,7 @@ module.exports = (notify) => {
             } else {
                 if (this.debug) notify.ulog(`pointless without callback, nothing changed`)
             }
+
             return this
         }
 
@@ -531,6 +542,7 @@ module.exports = (notify) => {
             delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
             this._lastUID = null
+            this._csetting = {}
             this.itemDataSet = null
             this.d = null
             return this
@@ -724,7 +736,8 @@ module.exports = (notify) => {
                             var not_uid = z !== '_uid'
                             var not_ri = z !== '_ri'
                             var not_timestemp = z !== '_timestamp'
-                            return not_uid && not_ri && not_timestemp
+                            var not_complete = z !== 'complete'
+                            return not_uid && not_ri && not_timestemp && not_complete
                         }))
 
                         var itm = fData[n][anonymousKey]
@@ -824,6 +837,12 @@ module.exports = (notify) => {
                         if (!isNumber((z || {})._timestamp)) {
                             console.log('err not number')
                             err_format = k
+                        }
+                        if ((z || {}).complete !== undefined) {
+                            if (!isBoolean(z.complete)) {
+                                console.log('err not boolean')
+                                err_format = k
+                            }
                         }
                     })
                 }
