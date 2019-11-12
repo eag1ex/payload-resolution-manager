@@ -43,6 +43,47 @@ module.exports = (notify) => {
             this.dataArchSealed = {}
         }
 
+        /**
+         * @dataArchAttrs
+         * all available attrs that can be passed to each set item of each `_uid`
+         */
+        get dataArchAttrs() {
+            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
+        }
+
+        /**
+         * // TODO
+         * @dataArchformat
+         * check  each data set is valid with the correct attrs
+         */
+        // validDataArchformat(dataItem = []) {
+        //     if (!isArray(dataItem)) {
+        //         if (this.debug) notify.ulog(`[dataArchformat] dataItem must be an array`, true)
+        //         return false
+        //     }
+        //     // set null atrs obj
+        //     var attrs = cloneDeep(this.dataArchAttrs).reduce((n, el) => {
+        //         n[el] = null
+        //         return n
+        //     }, {})
+
+        //     // validate each pass
+        //     for (var i = 0; i < dataItem.length; i++) {
+        //         var set = dataItem[i]
+        //         Object.keys(set).filter(z => {
+        //             if (attrs[z] !== undefined) attrs[z] = true
+        //         })
+        //     }
+        //     var validCountA = Object.keys(attrs).filter(z => attrs[z] === true).length === Object.keys(attrs).length
+        //     // exclude `complete` since its optional attr and can only be set via `computation` method
+        //     var validCountB = Object.keys(attrs).filter(z => attrs[z] === true).length === Object.keys(attrs).length - 1
+
+        //     if (validCountA || (validCountB && attrs['complete'] === null)) {
+        //         return true
+        //     }
+        //     return false
+        // }
+
         timestamp() {
             return new Date().getTime()
         }
@@ -220,9 +261,9 @@ module.exports = (notify) => {
                         var el = {}
 
                         var anonymousKey = Object.keys(z).filter(n => {
-                            return n !== '_ri' && n !== '_uid' && n !== '_timestamp' && n !== 'complete'
+                            var except = this.dataArchAttrs.filter(nn => (nn === n && n === dataRef)).length === 1
+                            return except// n !== '_ri' && n !== '_uid' && n !== '_timestamp' && n !== 'complete'
                         })
-
                         if (anonymousKey.length === 1) {
                             el[dataRef] = itm[head(anonymousKey)] // newData
                             el['_ri'] = z._ri
@@ -371,8 +412,9 @@ module.exports = (notify) => {
                                 itm['dataSet'] = z.dataSet || null
                                 if (Object.keys(z).length > 4) {
                                     var ignored = Object.keys(z).filter(n => {
-                                        var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
-                                        return vld
+                                        var except = this.dataArchAttrs.filter(nn => nn !== n).length
+                                        //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
+                                        return except
                                     })
                                     if (ignored.length) {
                                         if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
@@ -501,6 +543,10 @@ module.exports = (notify) => {
                         /// update only those which match ri to previously declared sets!
                         for (var i = 0; i < updateData.length; i++) {
                             var updItem = updateData[i]
+                            if (isEmpty(updItem)) {
+                                if (this.debug) notify.ulog(`[computation] warning item to update is empty, skipping`)
+                                continue
+                            }
                             var _uid = uid === false ? updItem._uid : uid
                             var ri = updItem._ri
                             if (this.dataArch[_uid][ri]) {
