@@ -588,7 +588,6 @@ module.exports = (notify) => {
             delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
             this._lastUID = null
-            this._csetting = {}
             this.itemDataSet = null
             this.d = null
             return this

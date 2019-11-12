@@ -19,7 +19,9 @@ module.exports = (PRM, exampleData, notify) => {
          *  Now we know what each itemDataSet is.. On `each` callback we can make further changes, whala!
          *  resx.itemDataSet = nn.d
          */
-        PRM.itemDataSet = nn.d
+
+        // we update only 3 items
+        PRM.itemDataSet = nn.d.slice(0, 3)
 
         // NOTE do some calculation for `each` item, must return 1 item
 
@@ -32,7 +34,7 @@ module.exports = (PRM, exampleData, notify) => {
         }
 
         return item
-    }, 'each', false) // anonymous uid
+    }, 'each', false) // anonymous uid, check `itemDataSet` first!
         .markDone(/* uid */) // will ignore setupData for uid:job_2 from future updates
         .setupData(d4)
         .finalize(null, uid)
@@ -42,9 +44,9 @@ module.exports = (PRM, exampleData, notify) => {
         [ { name: 'alex', age: 50, status: 'single' },
         { name: 'daniel', age: 85, status: 'divorce' },
         { name: 'john', age: 74, status: 'divorce' },
-        { name: 'max', age: 74, status: 'divorce' },
-        { name: 'smith', age: 96, status: 'divorce' },
-        { name: 'jane', age: 65, status: 'divorce' } ] }
+        { name: 'max', age: 44 },
+        { name: 'smith', age: 66 },
+        { name: 'jane', age: 35 } ]
          */
 
     return nn2
