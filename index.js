@@ -21,7 +21,7 @@ var exampleData = (id = 0) => {
 }
 
 // NOTE base chaining example
-// make sure that you update your `uid` when doing concurent chain with different `uid`
+// update your `uid` when doing concurent chaining
 var uid = 'job_1'
 
 var d1 = [{ name: 'alex', age: 20 }] // _ri = 0
@@ -32,20 +32,20 @@ var d4 = ['a', null, false] // _ri = 6,7,8
 var nn = resx.setupData(d1, uid)
     .setupData(d2)
     .setupData(d3) // add data to this item
-// .setupData(exampleData(5), 'index11')
+    // .setupData(exampleData(5), 'index11')
     .computation(item => {
         // NOTE do some calculation for `each` item, must return 1 item
         // if (item._ri===0) // do something
         item.dataSet.age += 20
         item.dataSet.status = 'single'
         return item
-    },'each') // we ignored `uid:null` since we are chaining only one job
-    // if we provided `index11` internal value will change, need to specify what to finalize!
-    .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
-    .setupData(d4) // ignored
+    },'each') // ignored.. We are chaining only one job
+    // if provided `index11` internal value will change, need to specify what to finalize
+    .markDone(/*uid */) // ignore setupData for uid:job_1 from future updates
+    .setupData(d4)
     .finalize()
     // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ job_1_nn: nn })
+notify.ulog({ job_1: nn })
 
 // returns:
 // [ { name: 'alex', age: 40, status: 'single' },
@@ -58,7 +58,7 @@ notify.ulog({ job_1_nn: nn })
 
 
 // NOTE partial chaining example with anonymous `uid` and `each` callback
-var uid = 'job_1a'
+var uid = 'job_2'
 var nn = resx.setupData(d1, uid) // add
 resx.setupData(d2) // add
     .setupData(d3) // add
@@ -67,9 +67,9 @@ var nn2= resx.computation(item => { // compute so far
 
         /**
          * NOTE 
-         *  to allow query without job `uid`, we set `this.itemDataSet=[{dataSet, _uid,_ri},...]`
-         *  it will anonymously search each items _uid and make valid updates in our scope
-         *  at the same time... Now that we know what each itemDataSet is, on `each` callback we can make further changes, whala!
+         *  allow query without job `uid`, we set `this.itemDataSet=[{dataSet, _uid,_ri},...]`
+         *  will anonymously search each items _uid and make valid updates in our scope
+         *  Now we know what each itemDataSet is.. On `each` callback we can make further changes, whala!
          *  resx.itemDataSet = nn.d
          */
         resx.itemDataSet = nn.d
@@ -79,17 +79,15 @@ var nn2= resx.computation(item => { // compute so far
         item.dataSet.age += 20
         item.dataSet.status = 'single'
         return item
-    }, 'each',false) /// anonymous uid
-    // if we provided `index11` internal value will change, need to specify what to finalize!
-    .markDone(/*uid */) // will ignore setupData for uid:job_1 from future updates
-    .setupData(d4) // ignored
+    }, 'each',false) // anonymous uid
+    .markDone(/*uid */) // will ignore setupData for uid:job_2 from future updates
+    .setupData(d4) 
     .finalize(null,uid)
-    // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ job_1a_nn: nn2 })
+notify.ulog({ job_2: nn2 })
 
 
 /// update  example 
-var uid = 'job_2'
+var uid = 'job_3'
 var dd = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri= 0,1
 
 resx.setupData(dd, uid)
@@ -103,8 +101,11 @@ resx.updateSetup(nn, uid)
 
 // update second item via updateDataSet
 resx.updateDataSet(uid, 1, { sex: 'any' }, 'merge')
-notify.ulog({ job_2_nn: resx.getItem(uid) })
+notify.ulog({ job_3: resx.getItem(uid) })
 notify.ulog({ uid_list: resx.getUIDS()})
+
+
+
 // example 1
 // var uid = 'index1'
 // var a = resx.setupData(exampleData(2), uid).d
