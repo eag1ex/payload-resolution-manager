@@ -37,5 +37,15 @@ module.exports = (PRM, exampleData, notify) => {
         .setupData(d4)
         .finalize(null, uid)
 
+    /**
+         * returns
+        [ { name: 'alex', age: 50, status: 'single' },
+        { name: 'daniel', age: 85, status: 'divorce' },
+        { name: 'john', age: 74, status: 'divorce' },
+        { name: 'max', age: 74, status: 'divorce' },
+        { name: 'smith', age: 96, status: 'divorce' },
+        { name: 'jane', age: 65, status: 'divorce' } ] }
+         */
+
     return nn2
 }
