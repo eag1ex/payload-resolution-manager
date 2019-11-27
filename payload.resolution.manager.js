@@ -334,7 +334,7 @@ module.exports = (notify) => {
                     if (this._dataArch.debug) notify.ulog({ message: 'some items in dataSet provided were not valid, not all were updated', validSize: this._itemDataSet.length })
                 }
             } else {
-                if (this.debug) notify.ulog('no valid data to update using itemDataSet, possibly your uids and/or ris do not match items in our scope', true)
+                if (this.debug) notify.ulog({ message: 'no valid data to update using itemDataSet, possibly your uids and/or ris do not match items in our scope', data: v }, true)
             }
         }
 
@@ -412,7 +412,7 @@ module.exports = (notify) => {
                                 itm['dataSet'] = z.dataSet || null
                                 if (Object.keys(z).length > 4) {
                                     var ignored = Object.keys(z).filter(n => {
-                                        var except = this.dataArchAttrs.filter(nn => nn !== n).length
+                                        var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
                                         //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
                                         return except
                                     })
@@ -519,7 +519,7 @@ module.exports = (notify) => {
                          findout what the total array is by initially updating with `itemDataSet`
                          will also throw silent error if try to update item index 0 in callback when  itemDataSet was not yet set
                         */
-                        var u = cb_sandbox(no_uid_no_item) // required to get our itemDataSet
+                        var u = cb_sandbox() // required to get our itemDataSet
                         if (u) u = flatMap([u])
 
                         // after first callback var should be updated
@@ -548,6 +548,8 @@ module.exports = (notify) => {
                                 continue
                             }
                             var _uid = uid === false ? updItem._uid : uid
+                            if (!this.dataArch[_uid]) continue
+
                             var ri = updItem._ri
                             if (this.dataArch[_uid][ri]) {
                                 if (this.dataArch[_uid][ri]._uid === _uid) {
