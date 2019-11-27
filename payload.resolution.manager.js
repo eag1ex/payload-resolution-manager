@@ -657,12 +657,13 @@ module.exports = (notify) => {
 
         /**
          * @itemFormated
-         * - return formated data with `_uid` and `_ri`
+         * - return formated data with `_uid` and `_ri` etc, if `clean=true`
          * - `uid` must already be available to format this item
          * - data will not be combined with `dataArch` chain
+         * `clean` when set will only retreive dataSets as an array
          * `external` when provided class will not check for size validation, but format must match
          */
-        itemFormated(data, uid, dataRef, external = null) {
+        itemFormated(data, uid, dataRef, external = null, clean = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -681,6 +682,10 @@ module.exports = (notify) => {
             var d = cloneDeep(data)
             for (var i = 0; i < d.length; i++) {
                 var dataSet = d[i]
+                if (clean === true) {
+                    setReady.push(dataSet)
+                    continue
+                }
                 var o = {}
                 var df = dataRef || 'dataSet'
                 o[df] = dataSet
