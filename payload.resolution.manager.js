@@ -634,14 +634,23 @@ module.exports = (notify) => {
             else this._lastUID = uid
 
             this.valUID(uid)
-            if (!this.availRef(uid) && !external) return null
+            if (!external) {
+                if (!this.availRef(uid)) return null
+            }
 
             if (isArray(data)) {
-                var validSize = data.length === this.resIndex[uid].length
-                if (!validSize && !external) {
-                    if (this.debug) notify.ulog(`[itemData] provided data size does nto match the size of original payload!`, true)
-                    return null
+                if (!external) {
+                    if (!this.resIndex[uid]) {
+                        if (this.debug) notify.ulog(`[itemData] provided uid not found`, true)
+                        return null
+                    }
+                    var validSize = data.length === this.resIndex[uid].length
+                    if (!validSize) {
+                        if (this.debug) notify.ulog(`[itemData] provided data size does nto match the size of original payload!`, true)
+                        return null
+                    }
                 }
+
                 return reduce(cloneDeep(data), (n, el, i) => {
                     var df = dataRef || 'dataSet'
                     if (uid === el._uid) {
@@ -650,8 +659,8 @@ module.exports = (notify) => {
                     return n
                 }, [])
             } else {
-                if (this.debug) notify.ulog(`provided data must be an array`, true)
-                return null
+                if (this.debug) notify.ulog(`provided data must be an array, nothing done original returned`)
+                return data //
             }
         }
 
@@ -660,10 +669,9 @@ module.exports = (notify) => {
          * - return formated data with `_uid` and `_ri` etc, if `clean=true`
          * - `uid` must already be available to format this item
          * - data will not be combined with `dataArch` chain
-         * `clean` when set will only retreive dataSets as an array
          * `external` when provided class will not check for size validation, but format must match
          */
-        itemFormated(data, uid, dataRef, external = null, clean = null) {
+        itemFormated(data, uid, dataRef, external = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -674,7 +682,7 @@ module.exports = (notify) => {
             var validSize = data.length === this.resIndex[uid].length
 
             if (!validSize && !external) {
-                if (this.debug) notify.ulog(`[itemFormated] provided data size does nto match the size of original payload!`, true)
+                if (this.debug) notify.ulog(`[itemFormated] provided data size does not match the size of original payload!`, true)
                 return null
             }
 
@@ -682,10 +690,7 @@ module.exports = (notify) => {
             var d = cloneDeep(data)
             for (var i = 0; i < d.length; i++) {
                 var dataSet = d[i]
-                if (clean === true) {
-                    setReady.push(dataSet)
-                    continue
-                }
+
                 var o = {}
                 var df = dataRef || 'dataSet'
                 o[df] = dataSet

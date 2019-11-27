@@ -22,8 +22,8 @@ var exampleData = (id = 0) => {
 
 notify.ulog(`uncomment each example to see the output in console`)
 
-const job_1 = require('./job_1')(resx,exampleData,notify)
-notify.ulog({ job_1 })
+// const job_1 = require('./job_1')(resx,exampleData,notify)
+// notify.ulog({ job_1 })
 
 // const job_2 = require('./job_2')(resx,exampleData,notify)
 // notify.ulog({ job_2 })
@@ -101,25 +101,25 @@ notify.ulog({ job_1 })
 // example 4, itemFormated
 resx.setupData(exampleData(2), 'index7').d
 var d = exampleData(2) // correct array size
-// var d = exampleData(3) // will produce an error since provided data is wrong array size!
-// var itemFormated = resx.itemFormated(d, 'index7') // use this to return formated item before you call `finalize(...)` method
-// notify.ulog({ itemFormated })
+var d = exampleData(3) // will produce an error since provided data is wrong array size!
+var itemFormated = resx.itemFormated(d, 'index7') // use this to return formated item before you call `finalize(...)` method
+notify.ulog({ itemFormated })
 // end
 // example 5, itemData
-// var d = resx.setupData(exampleData(2), 'index8').d
-// notify.ulog({ index8_d: d })
+var d = resx.setupData(exampleData(2), 'index8').d
+notify.ulog({ index8_d: d })
 
-// // above example looks like this:
-// // NOTE set `dataRef` to `set` to ge the output
-// // var d = exampleData(2).map((z, i) => {
-// //     z.set = { name: z.name, age: z.age } // <<
-// //     z._uid = `index8`
-// //     z._ri = i
-// //     return z
-// // })
+// above example looks like this:
+// NOTE set `dataRef` to `set` to ge the output
+// var d = exampleData(2).map((z, i) => {
+//     z.set = { name: z.name, age: z.age } // <<
+//     z._uid = `index8`
+//     z._ri = i
+//     return z
+// })
 
-// var itemData = resx.itemData(d, 'index8' /** ,dataRef:`set`**/) // return data without  `_uid` `_ri` references
-// notify.ulog({ itemData })
+var itemData = resx.itemData(d, 'index8' /** ,dataRef:`set`**/) // return data without  `_uid` `_ri` references
+notify.ulog({ itemData })
 // end
 
 // example 6, chaining

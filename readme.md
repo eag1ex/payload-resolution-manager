@@ -82,7 +82,6 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
 * `itemFormated(data[...], uid, dataRef, external, clean)` : for some reason you want to make sure your data is correct and return clean state. Provide data[...] as previously initialized with `setupData`. Does not update or change any internal states.
      - `dataRef:string` Provide different reference other then `dataSet`
      - `external:boolean` If its an external data that is not yet available in the class.
-     - `clean:boolean` return only dataSets as an array of items stripping out all attribute references.
 
 * `deleteSet(uid, force:true)`: you require some hacking, manualy delete cache and history from the class, specify `force=true` to delete all data.
 
