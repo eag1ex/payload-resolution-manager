@@ -16,7 +16,10 @@ module.exports = (notify) => {
             // if `hard` is set any invalid dataSet will be unset
             // if `soft` is set original dataSet will be kept
             this.invalidType = opts.invalid || 'soft' // `soft` or `hard`
+            this.finConditions = opts.onlyComplete || null // when set finalize will only resolve items that are marked as complete
+            this.batch = opts.batch || null
 
+            // when using batch onlyComplete is reset, because we complete each job once a batch of jobs is all complete
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
 
@@ -29,6 +32,7 @@ module.exports = (notify) => {
                  * example: [uid]:[{dataSet, _uid, _ri, _timestamp},...]
                  */
             }
+            this.batchDataArch = {} // collect jobs athat belong to a batch if `batch=true` is set
 
             this._uidsetting = {} // user defind setting updated via `costumization` method
             this._lastUID = null // last updated uid
@@ -83,6 +87,22 @@ module.exports = (notify) => {
         //     }
         //     return false
         // }
+
+        /**
+         * @validJobDataSet
+         * test `PRM` data attributes is valid
+         * return true/false
+         */
+        validJobDataSet(data) {
+            if (isEmpty(data)) return false
+            if (isArray(data)) return false
+
+            var ignoreCompete = this.dataArchAttrs.length !== Object.keys(data).length
+            return this.dataArchAttrs.filter(z => {
+                if (z === 'complete' && ignoreCompete) return false// ignore this one
+                if (data[z] !== undefined) return true
+            }).filter(z => !!z).length === Object.keys(data).length
+        }
 
         timestamp() {
             return new Date().getTime()
@@ -330,7 +350,7 @@ module.exports = (notify) => {
             })
             if (validData.length) {
                 this._itemDataSet = validData
-                if (this._itemDataSet.length !== v.length) {
+                if ((this._itemDataSet || []).length !== v.length) {
                     if (this._dataArch.debug) notify.ulog({ message: 'some items in dataSet provided were not valid, not all were updated', validSize: this._itemDataSet.length })
                 }
             } else {
@@ -357,7 +377,7 @@ module.exports = (notify) => {
                 return this
             }
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
-            this.itemDataSet = null
+            this._itemDataSet = null
 
             // catch all callback error handling thru here
             var cb_sandbox = (updatedData, skipIndex = null) => {
@@ -590,7 +610,7 @@ module.exports = (notify) => {
             delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
             this._lastUID = null
-            this.itemDataSet = null
+            this._itemDataSet = null
             this.d = null
             return this
         }
@@ -705,6 +725,89 @@ module.exports = (notify) => {
         }
 
         /**
+         * @dataAssesment
+         * check to see if all of jobs dataSets are marked `complete`, when they are issue delete of job uppon finalize
+         * returns true/false/null
+         */
+        dataAssesment(uid, data) {
+            this.valUID(uid)
+            if (isEmpty(data)) return null
+            if (!isArray(data)) return null
+            if (!this.finConditions) return null
+
+            var archJobSetCount = (this.dataArch[uid] || []).length
+            var finalDataComplCount = 0
+
+            for (var i = 0; i < data.length; i++) {
+                var job = data[i]
+
+                if (!this.validJobDataSet(job)) {
+                    if (this.debug) notify.ulog(`[dataAssesment] dataSet is not valid for ${uid}`, true)
+                    continue
+                }
+                if (job.complete) finalDataComplCount++
+            }
+
+            return archJobSetCount === finalDataComplCount
+        }
+
+        /**
+         * @batchResolution
+         * collect each completed job that belongs to a batch and return if all jobs are complete
+         * `jobUIDS` specify jobUID's being worked on
+         * `type` : can return as `flat` array or `grouped` object
+         */
+        batchResolution(jobUIDS = [], type = 'flat') {
+            if (!isArray(jobUIDS)) return null
+            if (!this.batch) return null
+
+            // must also be valid
+            for (var i = 0; i < jobUIDS.length; i++) {
+                this.valUID(jobUIDS[i])
+            }
+
+            // check if batch is set first
+            var batchSet = Object.keys(this.batchDataArch).filter(z => {
+                return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
+            }).length === jobUIDS.length
+
+            if (!batchSet) return null
+
+            var batchedJobs
+            if (type === 'flat') {
+                batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
+                    if (indexOf(jobUIDS, k) !== -1) n = [].concat(el, n)
+                    return n
+                }, []).filter(z => !!z)
+
+                batchedJobs = flatMap(batchedJobs)
+            }
+
+            if (type === 'grouped') {
+                batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
+                    if (indexOf(jobUIDS, k) !== -1) {
+                        n[k] = [].concat(el, n[k])
+                        n[k] = n[k].filter(z => !!z)
+                    }
+
+                    return n
+                }, {})
+            }
+
+            // purge
+            for (var k in this.batchDataArch) {
+                if (indexOf(jobUIDS, k) !== -1 && this.batchDataArch[k]) {
+                    delete this.batchDataArch[k]
+                    console.log(`purged batchDataArch for uid ${k}`)
+                }
+            }
+
+            notify.ulog({ message: 'batchedJobs results', jobUIDS, batchedJobs: batchedJobs })
+
+            return batchedJobs
+        }
+
+        /**
          * @_finalize_item
          * mothod called by finalize, to allow grouping calls
          */
@@ -798,14 +901,46 @@ module.exports = (notify) => {
                         }))
 
                         var itm = fData[n][anonymousKey]
-                        if (itm !== undefined) {
+
+                        // NOTE if set finalize will only take to accout all dataSets that are marked as `complete`
+                        if (this.finConditions === true) {
+                            if (fData[n].complete === true && itm !== undefined) {
+                                output.push(itm)
+                                continue
+                            }
+                        }
+
+                        if (itm !== undefined && !this.finConditions) {
                             output.push(itm)
                             continue
                         }
                     }
                 }
 
-                if (doDelete) this.deleteSet(uid)
+                var assesmentComleted = this.dataAssesment(uid, fData)
+                if (assesmentComleted) {
+                    // NOTE
+                    // in case we marked `onlyComplete` as an option, but data still exists and not completed
+                    // so do not delete
+                    if (!isEmpty(output)) {
+                        this.deleteSet(uid)
+                    }
+                } else if (doDelete) {
+                    // NOTE per above note
+                    if (!isEmpty(output)) {
+                        this.deleteSet(uid)
+                    }
+                }
+
+                /**
+                 * when `finConditions` is set it will only collect job completed items
+                 * when `batch` is set each batch item will be stored in `batchDataArch`
+                 */
+                if (this.batch && !isEmpty(output)) {
+                    this.batchDataArch[uid] = [].concat(output, this.batchDataArch[uid])
+                    this.batchDataArch[uid].filter(z => !!z)
+                }
+
                 // all good
                 this.reset(uid)
                 return output
@@ -843,6 +978,7 @@ module.exports = (notify) => {
                 if (!uid) uid = this._lastUID
                 else this._lastUID = uid
                 this.valUID(uid)
+                console.log('check finalize for uid', uid)
                 return this._finalize_item(externalData, uid, dataRef, doDelete)
             }
         }

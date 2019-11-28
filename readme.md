@@ -68,6 +68,10 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 * `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
+* `batchResolution(jobUIDS=[], type:string)`: You want to wait until specific jobs have been completed. Each job in batch is set uppon finalize is called, each time it will check if all your batch uids are set, and will return your batch 
+     - `jobUIDS` :specify job uids which you are working on
+     - `type`: can return as `flat` array, or `grouped` object
+
 * `finalize(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
      - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
      - `dataRef` your data is from external source:yourData, you have the option to provide `dataRef` if its other then `dataSet`
