@@ -37,7 +37,7 @@ module.exports = (PRM, exampleData, notify) => {
     }, 'each', false) // anonymous uid, check `itemDataSet` first!
         .markDone(/* uid */) // will ignore setupData for uid:job_2 from future updates
         .setupData(d4)
-        .finalize(null, uid)
+        .resolution(null, uid)
 
     /**
          * returns

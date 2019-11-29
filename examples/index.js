@@ -44,8 +44,8 @@ notify.ulog({ job_1 })
 // var b = resx.setupData(exampleData(1), uid).d
 // notify.ulog({ b }) // will return combined for `a and b`
 // resx.markDone(uid) // once marked cannot add anymore `setupData` of the same `index1`
-// var finalize_index1Data = resx.finalize(null, uid) // return final data and delete from class
-// notify.ulog({ finalize_index1Data })
+// var resolution_index1Data = resx.resolution(null, uid) // return final data and delete from class
+// notify.ulog({ resolution_index1Data })
 // end
 
 // example 2
@@ -61,10 +61,10 @@ notify.ulog({ job_1 })
 // }, 'all',uid)
 // // updated value for `index5`
 // var updated = resx.getItem(uid, true).d
-// notify.ulog({ updated }) // return latest update from computation before calling finalize
+// notify.ulog({ updated }) // return latest update from computation before calling resolution
 
-// var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
-// notify.ulog({ finalize_index5Data })
+// var resolution_index5Data = resx.resolution(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
+// notify.ulog({ resolution_index5Data })
 // end
 
 // example 2a
@@ -80,10 +80,10 @@ notify.ulog({ job_1 })
 // // }, 'each',uid)
 // // updated value for `index5`
 // var updated = resx.getItem(uid, true).d
-// notify.ulog({ updated }) // return latest update from computation before calling finalize
+// notify.ulog({ updated }) // return latest update from computation before calling resolution
 
-// var finalize_index5Data = resx.finalize(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
-// notify.ulog({ finalize_index5Data })
+// var resolution_index5Data = resx.resolution(null, uid) // return final data, only delete data for `index5`, `index3` will still remain
+// notify.ulog({ resolution_index5Data })
 
 // example 3
 // var a = resx.setupData(exampleData(2), 'index6').d
@@ -94,15 +94,15 @@ notify.ulog({ job_1 })
 // var d = resx.setupData(exampleData(0), 'index6').d // data from exampleData(0) is never added to `index6`
 // notify.ulog({ d }) // will return from `a,b,c`. Data from `d`is ignored!
 
-// var finalize_index6Data = resx.finalize(null, 'index6') // return final data and delete from class
-// notify.ulog({ finalize_index6Data })
+// var resolution_index6Data = resx.resolution(null, 'index6') // return final data and delete from class
+// notify.ulog({ resolution_index6Data })
 // end
 
 // example 4, itemFormated
 // resx.setupData(exampleData(2), 'index7').d
 // var d = exampleData(2) // correct array size
 // var d = exampleData(3) // will produce an error since provided data is wrong array size!
-// var itemFormated = resx.itemFormated(d, 'index7') // use this to return formated item before you call `finalize(...)` method
+// var itemFormated = resx.itemFormated(d, 'index7') // use this to return formated item before you call `resolution(...)` method
 // notify.ulog({ itemFormated })
 // // end
 // // example 5, itemData
@@ -127,7 +127,7 @@ notify.ulog({ job_1 })
 // make sure that you update your `uid` when doing concurent chain with different `uid`
 // var a = resx.setupData(exampleData(2), 'index9')
 //     .setupData(exampleData(1))
-//     // .setupData(exampleData(3), 'index1') // as explained above this would only produce finalize for `uid:index1`
+//     // .setupData(exampleData(3), 'index1') // as explained above this would only produce resolution for `uid:index1`
 
 //     .computation(item => {
 //         // NOTE do some calculation, must pass same array size as initial data
@@ -136,7 +136,7 @@ notify.ulog({ job_1 })
 //     },'all',/** ,uid */)
 
 //     // set doDelete=false if you do not wish to delete you data from the arch
-//     .finalize(/** customData, `index9`, doDelete=true */)
+//     .resolution(/** customData, `index9`, doDelete=true */)
 
 // notify.ulog({ index9_a: a })
 // end
@@ -153,9 +153,9 @@ notify.ulog({ job_1 })
 //         item.dataSet.age += 20
 //         return item
 //     }, 'each',null) // we ignored `uid:null` since we are chaining only one job
-//     // if we provided `index11` internal value will change, need to specify what to finalize!
+//     // if we provided `index11` internal value will change, need to specify what to resolution!
 //     // .markDone(/*uid*/) // will ignore setupData for uid:index10 from future updates
 //     .setupData(exampleData(5))
-//     .finalize()
-//     // .finalize(/** customData, `index11`, doDelete=true */)
+//     .resolution()
+//     // .resolution(/** customData, `index11`, doDelete=true */)
 // notify.ulog({ index10_a: a })

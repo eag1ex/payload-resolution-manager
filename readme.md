@@ -18,40 +18,109 @@
 ##### Features:
 - This application supports chaining of methods, example:
 ```
-// NOTE base chaining example
-// update your `uid` when doing concurent chaining
-var uid = 'job_1'
+/**
+ * Application, advance chaining example
+ * We declared 3 jobs and did some computation to update original data states, the 3rd jobs is delayed. all jobs are returned
+ * using `batchResolution`
+ */
+const notify = require('./libs/notifications')()
+const PRM = require('./payload.resolution.manager')(notify)
 
-var d1 = [{ name: 'alex', age: 20 }] // _ri = 0
+const options = {
+    onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+    batch: true, // after running `resolution` method, each job that is batched using `batchResolution([jobA,jobB,jobC])`, only total batch will be returned when ready
+    finSelf: true, // allow chaning multiple resolution
+    autoComplete: true // auto set complete on every computation iteration within `each` call
+}
+
+const prm = new PRM(true, options)
+var job50 = 'job_50'
+var job60 = 'job_60'
+var job70 = 'job_70'
+var d1 = [{ name: 'alex', age: 20 }, { name: 'jackie', age: 32 }] // _ri = 0
 var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 1,2
 var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 3,4,5
-var d4 = ['a', null, false] // _ri = 6,7,8
+var d4 = [{ name: 'mayson', age: 27 }, { name: 'bradly', age: 72 }, { name: 'andrew', age: 63 }] // _ri = 4,5,6
 
-var nn = resx.setupData(d1, uid)
+var d = prm.setupData(d1, job50)
     .setupData(d2)
-    .setupData(d3) // add data to this item
-    // .setupData(exampleData(5), 'index11')
+    .setupData(d3)
     .computation(item => {
-        // NOTE do some calculation for `each` item, must return 1 item
-        // if (item._ri===0) // do something
-        item.dataSet.age += 20
-        item.dataSet.status = 'single'
+        if (item._ri === 3) {
+            item.dataSet.age = 70
+            item.dataSet.occupation = 'retired'
+        } else item.dataSet.occupation = 'stock broker'
+        //  item.complete = true // because we set an option for `onlyComplete` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
         return item
-    },'each') // ignored.. We are chaining only one job
-    // if provided `index11` internal value will change, need to specify what to finalize
-    .markDone(/*uid */) // ignore setupData for uid:job_1 from future updates
-    .setupData(d4)
-    .finalize()
-    // .finalize(/** customData, `index11`, doDelete=true */)
-notify.ulog({ job_1: nn })
+    }, 'each')
+    .markDone() // no future changes are allowed to `job_50`
 
-// returns:
-// [ { name: 'alex', age: 40, status: 'single' },
-//      { name: 'daniel', age: 75, status: 'single' },
-//      { name: 'john', age: 64, status: 'single' },
-//      { name: 'max', age: 64, status: 'single' },
-//      { name: 'smith', age: 86, status: 'single' },
-//      { name: 'jane', age: 55, status: 'single' } ] }
+    // this change will be ignored!
+    .setupData(d2)
+    .computation(item => {
+        //   item.complete = true
+        return item
+    }, 'each')
+
+    .setupData(d1, job60)
+    .setupData(d3)
+    .computation(items => {
+        var allNewItems = items.map((zz, inx) => {
+            return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx }
+        })
+        // return value need to match total length of initial job
+        return allNewItems
+    }, 'all')
+    .resolution(null, job50)
+    .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
+    /**
+     * if you prefer to return each resolution seperatry:
+     * var d1 = prm.resolution(null,job50).d
+     * var d2 = prm.resolution(null,job60).d
+     */
+notify.ulog({ job60: d })
+
+var delayedJob = (() => {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            prm.setupData(d4, job70)
+                .computation(items => {
+                    return items.map((zz, inx) => {
+                        var orVals = zz.dataSet
+                        return Object.assign({}, orVals, { status: 'updated', age: orVals.age + 10 + inx })
+                    })
+                }, 'all')
+                .resolution()
+            resolve(true)
+        }, 1000)
+    })
+})()
+
+delayedJob.then(d => {
+    var batch = prm.batchResolution([job50, job60, job70])
+    notify.ulog({ batch, message: 'delayed results' })
+
+    /**
+     * returns..
+  [ { name: 'mayson', age: 37, status: 'updated' },
+     { name: 'bradly', age: 82, status: 'updated' },
+     { name: 'andrew', age: 73, status: 'updated' },
+     { name: 'alex', surname: 'anonymous', age: 20 },
+     { name: 'jackie', surname: 'anonymous', age: 33 },
+     { name: 'max', surname: 'anonymous', age: 46 },
+     { name: 'smith', surname: 'anonymous', age: 69 },
+     { name: 'jane', surname: 'anonymous', age: 39 },
+     { name: 'alex', age: 20, occupation: 'stock broker' },
+     { name: 'jackie', age: 32, occupation: 'stock broker' },
+     { name: 'daniel', age: 55, occupation: 'stock broker' },
+     { name: 'john', age: 70, occupation: 'retired' },
+     { name: 'max', age: 44, occupation: 'stock broker' },
+     { name: 'smith', age: 66, occupation: 'stock broker' },
+     { name: 'jane', age: 35, occupation: 'stock broker' } ]
+     */
+})
+
+/// //////////////////////////
 ```
 
 
@@ -68,11 +137,11 @@ this item will be saved by reference in class variable with `_ri` and `_uid` . Y
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 * `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
-* `batchResolution(jobUIDS=[], type:string)`: You want to wait until specific jobs have been completed. Each job in batch is set uppon finalize is called, each time it will check if all your batch uids are set, and will return your batch 
+* `batchResolution(jobUIDS=[], type:string)`: You want to wait until specific jobs have been completed. Each job in batch is set uppon resolution is called, each time it will check if all your batch uids are set, and will return your batch 
      - `jobUIDS` :specify job uids which you are working on
      - `type`: can return as `flat` array, or `grouped` object
 
-* `finalize(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
+* `resolution(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
      - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
      - `dataRef` your data is from external source:yourData, you have the option to provide `dataRef` if its other then `dataSet`
      - `doDelete:true` will always delete the job from class cache after its finilized, you have the option not to delete it! 

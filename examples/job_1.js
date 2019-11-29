@@ -18,11 +18,11 @@ module.exports = (PRM, exampleData, notify) => {
             item.dataSet.age += 20
             item.dataSet.status = 'single'
 
-            item.complete = true // when set will force to delete uppon finatize, only if all of `job_1` are complete
+            item.complete = true // when set will force to delete uppon resolution, only if all of `job_1` are complete
 
             return item
         }, 'each') // ignored.. We are chaining only one job
-        // if provided `index11` internal value will change, need to specify what to finalize
+        // if provided `index11` internal value will change, need to specify what to resolution
         .markDone(uid) // ignore setupData for uid:job_1 from future updates
         .setupData(d4, 'job_2')
         .computation(item => {
@@ -30,14 +30,14 @@ module.exports = (PRM, exampleData, notify) => {
             item.complete = true
             return item
         }, 'each')
-        .finalize(null, 'job_1')
-    PRM.finalize(null, 'job_2')
+        .resolution(null, 'job_1')
+    PRM.resolution(null, 'job_2')
 
     // NOTE set batch resolution
     // PRM.batchResolution(['job_1', 'job_2'])
 
     // PRM.batchResolution(['job_1'])
-    // .finalize(/** customData, `index11`, doDelete=true */)
+    // .resolution(/** customData, `index11`, doDelete=true */)
     // notify.ulog({ job_1: nn })
 
     // returns:
