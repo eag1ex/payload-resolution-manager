@@ -77,6 +77,11 @@ var delayedJob = (() => {
     })
 })()
 
+// can also use callback to check every 100 mils
+// prm.batchResolution([job50, job60, job70], 'flat', d => {
+//     notify.ulog({ batch: d, message: 'delayed results' })
+// },100)
+
 delayedJob.then(d => {
     var batch = prm.batchResolution([job50, job60, job70])
     notify.ulog({ batch, message: 'delayed results' })

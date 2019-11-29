@@ -783,54 +783,76 @@ module.exports = (notify) => {
          * after batch is returned only batch listed jobs are deleted from batchDataArch
          * `jobUIDS` specify jobUID's being worked on
          * `type` : can return as `flat` array or `grouped` object
+         * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
+         * `every`: when doneCB is set as function callback, every > means to check for ready every miliseconds
          */
-        batchResolution(jobUIDS = [], type = 'flat') {
+        batchResolution(jobUIDS = [], type = 'flat', doneCB = null, every = 100) {
             if (!isArray(jobUIDS)) return null
             if (!this.batch) return null
+
+            if (!type) type = 'flat' // set default
 
             // must also be valid
             for (var i = 0; i < jobUIDS.length; i++) {
                 this.valUID(jobUIDS[i])
             }
 
-            // check if batch is set first
-            var batchSet = Object.keys(this.batchDataArch).filter(z => {
-                return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
-            }).length === jobUIDS.length
+            var performResolution = () => {
+                var batchedJobs
 
-            if (!batchSet) return null
+                // check if batch is set first
+                var batchSet = Object.keys(this.batchDataArch).filter(z => {
+                    return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
+                }).length === jobUIDS.length
 
-            var batchedJobs
-            if (type === 'flat') {
-                batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
-                    if (indexOf(jobUIDS, k) !== -1) n = [].concat(el, n)
-                    return n
-                }, []).filter(z => !!z)
+                if (!batchSet) return null
 
-                batchedJobs = flatMap(batchedJobs)
-            }
+                if (type === 'flat') {
+                    batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
+                        if (indexOf(jobUIDS, k) !== -1) n = [].concat(el, n)
+                        return n
+                    }, []).filter(z => !!z)
 
-            if (type === 'grouped') {
-                batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
-                    if (indexOf(jobUIDS, k) !== -1) {
-                        n[k] = [].concat(el, n[k])
-                        n[k] = n[k].filter(z => !!z)
-                    }
-                    return n
-                }, {})
-            }
-
-            // purge
-            for (var k in this.batchDataArch) {
-                if (indexOf(jobUIDS, k) !== -1 && this.batchDataArch[k]) {
-                    delete this.batchDataArch[k]
-                    // console.log(`purged batchDataArch for uid ${k}`)
+                    batchedJobs = flatMap(batchedJobs)
                 }
+
+                if (type === 'grouped') {
+                    batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
+                        if (indexOf(jobUIDS, k) !== -1) {
+                            n[k] = [].concat(el, n[k])
+                            n[k] = n[k].filter(z => !!z)
+                        }
+                        return n
+                    }, {})
+                }
+
+                // purge
+                for (var k in this.batchDataArch) {
+                    if (indexOf(jobUIDS, k) !== -1 && this.batchDataArch[k]) {
+                        delete this.batchDataArch[k]
+                    // console.log(`purged batchDataArch for uid ${k}`)
+                    }
+                }
+
+                return batchedJobs
             }
 
-            // notify.ulog({ message: 'batchedJobs results', jobUIDS, batchedJobs: batchedJobs })
-
-            return batchedJobs
+            //
+            if (typeof doneCB === 'function') {
+                var evr = every || 100
+                var timer = setInterval(() => {
+                    var r = performResolution()
+                    if (!isEmpty(r)) {
+                        clearInterval(timer)
+                        doneCB(r)
+                    }
+                }, evr)
+                return null
+            } else {
+                var ready = performResolution()
+                // notify.ulog({ message: 'batchedJobs results', jobUIDS, batchedJobs: batchedJobs })
+                return ready
+            }
         }
 
         /**
