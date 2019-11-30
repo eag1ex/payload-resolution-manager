@@ -5,7 +5,7 @@
  * using `batchResolution`
  */
 const notify = require('./libs/notifications')()
-const PRM = require('./payload.resolution.manager')(notify)
+const PRM = require('./libs/prm/payload.resolution.manager')(notify)
 
 const options = {
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
@@ -80,15 +80,15 @@ var delayedJob = (() => {
 })()
 
 // can also use callback to check every 100 mils
-// prm.batchResolution([job50, job60, job70], 'flat', d => {
-//     notify.ulog({ batch: d, message: 'delayed results' })
-// },100)
+prm.batchResolution([job50, job60, job70], 'flat', d => {
+    notify.ulog({ batch: d, message: 'delayed results' })
+})
 
-delayedJob.then(d => {
-    var batch = prm.batchResolution([job50, job60, job70])
-    notify.ulog({ batch, message: 'delayed results' })
+// delayedJob.then(d => {
+//     var batch = prm.batchResolution([job50, job60, job70])
+//     notify.ulog({ batch, message: 'delayed results' })
 
-    /**
+/**
      * returns..
   [ { name: 'mayson', age: 37, status: 'updated' },
      { name: 'bradly', age: 82, status: 'updated' },
@@ -106,7 +106,7 @@ delayedJob.then(d => {
      { name: 'smith', age: 66, occupation: 'stock broker' },
      { name: 'jane', age: 35, occupation: 'stock broker' } ]
      */
-})
+// })
 
 /// //////////////////////////
 module.export = true

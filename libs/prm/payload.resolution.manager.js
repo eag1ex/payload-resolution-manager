@@ -6,107 +6,138 @@
  */
 
 module.exports = (notify) => {
-    if (!notify) notify = require('./libs/notifications')()
+    if (!notify) notify = require('../notifications')()
     const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
-    /**
-     * @PrmProto prototype
-     * assing prototype to each job set to make sure `_uid` and `_ri` cannot be chnaged
-     */
-    class PrmProto {
-        constructor(debug) {
-            this.debug = debug
-        }
-
-        get props() {
-            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
-        }
-
-        testdataSet(data) {
-            if (isEmpty(data)) return false
-            if (isArray(data)) return false
-
-            var ignoreCompete = this.props.length !== Object.keys(data).length
-            return this.props.filter(z => {
-                if (z === 'complete' && ignoreCompete) return false// ignore this one
-                if (data[z] !== undefined) return true
-            }).filter(z => !!z).length === Object.keys(data).length
-        }
-
-        assign(dataSetItem, conf = { enumerable: true, writable: false, configurable: false }, strip = null) {
-            if (!isObject(dataSetItem) ||
-                isArray(dataSetItem) ||
-                isEmpty(dataSetItem) ||
-                !Object.keys((dataSetItem || {})).length) {
-                if (this.debug) notify.ulog(`[assign] assigning new dataSetItem you need to provide an object with all required dataArchAttrs/props, nothing done!`, true)
-
-                return null
-            }
-
-            if (!this.testdataSet(dataSetItem)) {
-                if (this.debug) notify.ulog(`[assign] dataSetItem failed testdataSet validation`, true)
-                return null
-            }
-
-            var createMod = (_strip) => {
-                return Object.keys(dataSetItem).reduce((all, prop) => {
-                    var p = dataSetItem[prop]
-                    var val = (p !== undefined && p !== null) ? p : null
-                    all[prop] = {
-                        value: val,
-                        writable: true,
-                        enumerable: true,
-                        configurable: false
-                    }
-
-                    // manual confing override
-                    if ((prop === '_uid' || prop === '_ri') && !_strip) {
-                        if (!isEmpty(conf) && isObject(conf)) {
-                            reduce(conf, (n, el, k) => {
-                                all[prop][k] = el
-                            }, {})
-                        } else {
-                            all[prop].writable = false
-                            all[prop].enumerable = false
-                            all[prop].configurable = false
-                        }
-
-                        if (_strip) {
-                            // allow all changes and mods
-                            all[prop].writable = true
-                            all[prop].enumerable = true
-                            all[prop].configurable = true
-                        }
-                    }
-
-                    return all
-                }, {})
-            }
-
-            /// strip prototype and return only object
-            // if (strip === true) {
-            //     var strippedModel = {}
-            //     Object.keys(cloneDeep(dataSetItem)).reduce((n, kVal) => {
-            //         Object.defineProperty(strippedModel, kVal, {
-            //             value: cloneDeep(dataSetItem[kVal]),
-            //             writable: true,
-            //             configurable: true,
-            //             enumerable: true
-            //         })
-            //     }, {})
-            //     return strippedModel
-            // }
-
-            return Object.create(PrmProto.prototype, createMod(strip))
-        }
-    }
+    const PrmProto = require('./prm.proto')(notify)
 
     // const prmMod = new PrmProto()
     // var item = { dataSet: { name: 'alex', age: 50 }, _ri: 0, _uid: 'job1', _timestamp: new Date().getTime() }
     // var m = prmMod.assign(item)
 
-    class PayloadResolutioManager {
+    /**
+     * assing callback properties to batchResolution
+     */
+    class BatchCallbacks {
+        constructor(debug) {
+            this.debug = debug
+
+            this._batchListenerList = {}
+            this.createCBListener('batchListenerList') // overload above
+            this.batchCBList = {}
+        }
+
+        createCBListener(prop) {
+            const self = this
+            const _prop = prop
+            try {
+                (function(prop) {
+                    Object.defineProperty(self, prop, {
+                        get: function() {
+                            return self[`_${_prop}`]
+                        },
+                        set: function(val) {
+                            self[`_${_prop}`] = val
+
+                            // notify.ulog({ message: 'prop set', val: self[`_${_prop}`] })
+                            //  setTimeout(() => {
+                            var prps = cloneDeep(self[`_${_prop}`])
+                            for (var k in prps) {
+                                if (!prps.hasOwnProperty(k)) continue
+                                var uid = k
+                                if (typeof self.batchCBList[uid] === 'function') {
+                                    self.batchCBList[uid](val)
+                                }
+                            }
+                            // }, 100)
+                        },
+                        configurable: true, // strict
+                        enumerable: true /// make it visible
+                    })
+                })(prop)
+            } catch (err) {
+                console.log('-- err cresting listener ', err)
+            }
+        }
+
+        /**
+         * @batchCBDone
+         * will check when each batch callback was made if both set
+         * make final callback
+         */
+        batchCBDone(uids, cb) {
+            var delOld = () => {
+                for (var i = 0; i < uids.length; i++) {
+                    delete this.batchListenerList[uids[i]]
+                    delete this.batchCBList[uids[i]]
+                }
+            }
+            var callsMade = []
+            for (var i = 0; i < uids.length; i++) {
+                this.batchCB(uids[i], (d) => {
+                    this.batchCBList[uids[i]] = null
+
+                    callsMade.push(uids[i])
+                    callsMade = uniq(callsMade)
+                    console.log('callsMade', callsMade)
+                    console.log('uids ..', uids)
+                    if (callsMade.length >= uids.length) {
+                        cb()// reaady
+                        // unsubscribe delete all callbacks
+                        console.log('batchCBDone!!!')
+                        delOld()
+                    }
+                })
+            }
+        }
+        /**
+         * @batchCB
+         * create new instance callback, or return existing
+         * batch will work on any subsequent call, every first/initial makes a setting and listener
+         * if you have a batch job that only holds 1 uid to listen for, no callback will be made
+         */
+        batchCB(uid, cb = null) {
+            if (!uid || !isString(uid)) {
+                return null
+            }
+
+            try {
+                this.batchListenerList[uid] = 1
+                if (typeof cb === 'function') {
+                    if (!this.batchCBList[uid] && this.batchCBList[uid] !== null) this.batchCBList[uid] = cb
+                }
+
+                // set to invoke update
+
+                // if (!this.batchListenerList[uid]) {
+
+                this.batchListenerList = Object.assign({}, this.batchListenerList)
+                // } else {
+                //     // delete this.batchCBList[uid]
+                // }
+
+                notify.ulog(this.batchListenerList)
+                return
+            } catch (err) {
+                console.log('-- err no match found', err)
+            }
+        }
+
+        /**
+         * @del
+         * delete callback from batchBCList by `uid`
+         */
+        del(uid) {
+            if (this.batchBCList[uid] !== undefined) {
+                delete this.batchBCList[uid]
+            }
+            return this
+        }
+    }
+
+    class PayloadResolutioManager extends BatchCallbacks {
         constructor(debug, opts = {}) {
+            super(debug)
             // resolution index
 
             // NOTE
@@ -934,7 +965,7 @@ module.exports = (notify) => {
          * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
          * `every`: when doneCB is set as function callback, every > means to check for ready every miliseconds
          */
-        batchResolution(jobUIDS = [], type = 'flat', doneCB = null, every = 100) {
+        batchResolution(jobUIDS = [], type = 'flat', doneCB = null) {
             if (!isArray(jobUIDS)) return null
             if (!this.batch) return null
 
@@ -987,14 +1018,20 @@ module.exports = (notify) => {
 
             //
             if (typeof doneCB === 'function') {
-                var evr = every || 100
-                var timer = setInterval(() => {
+                this.batchCBDone(jobUIDS, () => {
                     var r = performResolution()
-                    if (!isEmpty(r)) {
-                        clearInterval(timer)
-                        doneCB(r)
-                    }
-                }, evr)
+                    console.log('performResolution', r)
+                    doneCB(r)
+                })
+                // var evr = every || 100
+                // var timer = setInterval(() => {
+                //     var r = performResolution()
+                //     if (!isEmpty(r)) {
+                //         clearInterval(timer)
+                //         doneCB(r)
+                //     }
+                // }, evr)
+
                 return null
             } else {
                 var ready = performResolution()
@@ -1145,6 +1182,7 @@ module.exports = (notify) => {
                 if (this.batch && !isEmpty(output)) {
                     this.batchDataArch[uid] = [].concat(output, this.batchDataArch[uid])
                     this.batchDataArch[uid].filter(z => !!z)
+                    this.batchCB(uid) // set
                 }
 
                 // all good
