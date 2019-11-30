@@ -582,20 +582,24 @@ module.exports = (notify) => {
                                     if (this.autoComplete) itm['complete'] = true
                                 }
 
-                                if (Object.keys(z).length > 4) {
-                                    var ignored = Object.keys(z).filter(n => {
-                                        var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
-                                        //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
-                                        return except
-                                    })
-                                    if (ignored.length) {
-                                        if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                try {
+                                    if (Object.keys(z).length > 4) {
+                                        var ignored = Object.keys(z).filter(n => {
+                                            var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
+                                            //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
+                                            return except
+                                        })
+                                        if (ignored.length) {
+                                            if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                        }
+                                        times(ignored.length, (i) => {
+                                            var del = ignored[i]
+                                            delete z[del]
+                                            delete itm[del]
+                                        })
                                     }
-                                    times(ignored.length, (i) => {
-                                        var del = ignored[i]
-                                        delete z[del]
-                                        delete itm[del]
-                                    })
+                                } catch (err) {
+                                    console.log('-- err in itemUpdated ', err)
                                 }
                             } else {
                                 itm['_ri'] = originalFormat[i]['_ri']
