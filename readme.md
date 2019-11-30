@@ -125,6 +125,7 @@ delayedJob.then(d => {
 
 
 ##### Methodes explained:
+* `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a model prototype of `PrmProto` class instance, vals: `_uid, _ri` are protected and cannot be overriten to make sure fluency and consistency of data flow and prone errors. Only values which can be changed are `dataSet, _timestamp, complete`. 
 * `uid:String`: Must provide uid for every data asset, per job. If you do not specify, it will first try to find last used uid.
 * `data[...]`: Every job you provide must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
 * `setupData(data:Array,uid:String)`: Provide your request data as array (can be single array),with uniq identifier,

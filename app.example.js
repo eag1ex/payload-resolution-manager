@@ -28,6 +28,8 @@ var d = prm.setupData(d1, job50)
     .setupData(d3)
     .computation(item => {
         if (item._ri === 3) {
+            //  item._uid = '10000_error' // protected cannot be changed
+            //  item._ri = '-50'  // protected cannot be changed
             item.dataSet.age = 70
             item.dataSet.occupation = 'retired'
         } else item.dataSet.occupation = 'stock broker'

@@ -9,6 +9,102 @@ module.exports = (notify) => {
     if (!notify) notify = require('./libs/notifications')()
     const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
+    /**
+     * @PrmProto prototype
+     * assing prototype to each job set to make sure `_uid` and `_ri` cannot be chnaged
+     */
+    class PrmProto {
+        constructor(debug) {
+            this.debug = debug
+        }
+
+        get props() {
+            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
+        }
+
+        testdataSet(data) {
+            if (isEmpty(data)) return false
+            if (isArray(data)) return false
+
+            var ignoreCompete = this.props.length !== Object.keys(data).length
+            return this.props.filter(z => {
+                if (z === 'complete' && ignoreCompete) return false// ignore this one
+                if (data[z] !== undefined) return true
+            }).filter(z => !!z).length === Object.keys(data).length
+        }
+
+        assign(dataSetItem, conf = { enumerable: true, writable: false, configurable: false }, strip = null) {
+            if (!isObject(dataSetItem) ||
+                isArray(dataSetItem) ||
+                isEmpty(dataSetItem) ||
+                !Object.keys((dataSetItem || {})).length) {
+                if (this.debug) notify.ulog(`[assign] assigning new dataSetItem you need to provide an object with all required dataArchAttrs/props, nothing done!`, true)
+
+                return null
+            }
+
+            if (!this.testdataSet(dataSetItem)) {
+                if (this.debug) notify.ulog(`[assign] dataSetItem failed testdataSet validation`, true)
+                return null
+            }
+
+            var createMod = (_strip) => {
+                return Object.keys(dataSetItem).reduce((all, prop) => {
+                    var p = dataSetItem[prop]
+                    var val = (p !== undefined && p !== null) ? p : null
+                    all[prop] = {
+                        value: val,
+                        //   writable: false,
+                        enumerable: true,
+                        configurable: false
+                    }
+
+                    // manual confing override
+                    if ((prop === '_uid' || prop === '_ri') && !_strip) {
+                        if (!isEmpty(conf) && isObject(conf)) {
+                            reduce(conf, (n, el, k) => {
+                                all[prop][k] = el
+                            }, {})
+                        } else {
+                            all[prop].writable = false
+                            all[prop].enumerable = false
+                            all[prop].configurable = false
+                        }
+
+                        if (_strip) {
+                            // allow all changes and mods
+                            all[prop].writable = true
+                            all[prop].enumerable = true
+                            all[prop].configurable = true
+                        }
+                    }
+
+                    return all
+                }, {})
+            }
+
+            /// strip prototype and return only object
+            // if (strip === true) {
+            //     var strippedModel = {}
+            //     Object.keys(cloneDeep(dataSetItem)).reduce((n, kVal) => {
+            //         Object.defineProperty(strippedModel, kVal, {
+            //             value: cloneDeep(dataSetItem[kVal]),
+            //             writable: true,
+            //             configurable: true,
+            //             enumerable: true
+            //         })
+            //     }, {})
+            //     return strippedModel
+            // }
+
+            return Object.create(PrmProto.prototype, createMod(strip))
+        }
+    }
+
+    // const prmMod = new PrmProto()
+    // var item = { dataSet: { name: 'alex', age: 50 }, _ri: 0, _uid: 'job1', _timestamp: new Date().getTime() }
+    // var m = prmMod.assign(item)
+
     class PayloadResolutioManager {
         constructor(debug, opts = {}) {
             // resolution index
@@ -54,6 +150,42 @@ module.exports = (notify) => {
          */
         get dataArchAttrs() {
             return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
+        }
+
+        /**
+         * @assingMod
+         * assing prototype to each dataSet item
+         * `dataSetItem`: must provide valid object
+         * `config`: available options are: enumerable, writable configurable, and assigneld to `_uid` and `_ri`
+         * `strip`: strip prototype from model
+         */
+        assingMod(dataSetItem, config = {}, strip = null) {
+            if (!isEmpty(config)) return new PrmProto(this.debug).assign(dataSetItem, config, strip)
+            else {
+                if (strip) return new PrmProto(this.debug).assign(dataSetItem, null, strip)
+                else return new PrmProto(this.debug).assign(dataSetItem)
+            }
+        }
+
+        /**
+         * @loopAssingMod
+         * loop thru each item in jobs array and assing prototypes
+         * `config` refer to assingMod
+         * return mods Arr / null
+         */
+        loopAssingMod(jobArr, config) {
+            if (!isArray(jobArr)) return null
+            var total = jobArr.length
+
+            var modsArr = []
+            for (var i = 0; i < jobArr.length; i++) {
+                var d
+                if (!isEmpty(config)) d = this.assingMod(jobArr[i], config)
+                else d = this.assingMod(jobArr[i])
+                modsArr.push(d)
+            }
+            if (modsArr.length === total) return modsArr
+            else return null
         }
 
         /**
@@ -248,6 +380,7 @@ module.exports = (notify) => {
             var newItemDataSet = this._validDataItem(newData, uid)
             if (!isEmpty(newItemDataSet) && isArray(newItemDataSet)) {
                 this.dataArch[uid] = newItemDataSet
+                this.dataArch = Object.assign({}, this.dataArch)
                 this.d = cloneDeep(this.dataArch[uid])
                 return this
                 /// this._resIndex[] < remain the same, we only updating data
@@ -352,7 +485,7 @@ module.exports = (notify) => {
             if (validData.length) {
                 this._itemDataSet = validData
                 if ((this._itemDataSet || []).length !== v.length) {
-                    if (this._dataArch.debug) notify.ulog({ message: 'some items in dataSet provided were not valid, not all were updated', validSize: this._itemDataSet.length })
+                    if (this.debug) notify.ulog({ message: 'some items in dataSet provided were not valid, not all were updated', validSize: this._itemDataSet.length })
                 }
             } else {
                 if (this.debug) notify.ulog({ message: 'no valid data to update using itemDataSet, possibly your uids and/or ris do not match items in our scope', data: v }, true)
@@ -374,7 +507,7 @@ module.exports = (notify) => {
             if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
 
             if (this.dataArchSealed[uid] && uid !== false) {
-                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothung changed!`, true)
+                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
                 return this
             }
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
@@ -394,7 +527,7 @@ module.exports = (notify) => {
             var setNewForTypeAll = (data, originalFormat) => {
                 var itm = {}
                 itm['_ri'] = originalFormat['_ri']
-                itm['_uid'] = uid
+                itm['_uid'] = originalFormat['_uid']
                 itm['_timestamp'] = this.timestamp() // set new time
                 itm['dataSet'] = data || null
                 if (this.autoComplete) itm['complete'] = true
@@ -404,6 +537,9 @@ module.exports = (notify) => {
             if (typeof cb === 'function') {
                 // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
                 if (this.grab_ref[uid] || uid === false) {
+                    // grab original references
+                    var originalFormat = this.grab_ref[uid]
+
                     var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
                         if (typeof items === 'function') {
@@ -423,7 +559,6 @@ module.exports = (notify) => {
                         }
 
                         var n = (items || []).map((z, i) => {
-                            var originalFormat = this.grab_ref[uid][i]
                             if (typeof z === 'function') {
                                 if (this.debug) notify.ulog(`returnin a pormise is not yet supported, nothing updated for index ${i}`, true)
                                 return null
@@ -431,9 +566,10 @@ module.exports = (notify) => {
 
                             var itm = {}
                             if (inx !== null) i = inx // when for `each` index need to come from external loop
+
                             if (isObject(z) && !isArray(z)) {
                                 if (!z.dataSet) {
-                                    itm = setNewForTypeAll(z, originalFormat)
+                                    itm = setNewForTypeAll(z, originalFormat[i])
                                     // if no dataSet lets remake last before update
                                     //  if (this.debug) notify.ulog(`[computation] .dataSet must be set for all user values or it will return null`)
                                 } else {
@@ -462,7 +598,7 @@ module.exports = (notify) => {
                                     })
                                 }
                             } else {
-                                itm['_ri'] = originalFormat['_ri']
+                                itm['_ri'] = originalFormat[i]['_ri']
                                 if (uid) itm['_uid'] = uid
                                 itm['_timestamp'] = this.timestamp()
                                 itm['dataSet'] = z || null
@@ -470,6 +606,7 @@ module.exports = (notify) => {
                             }
 
                             /// validate `_ri` and `uid`
+
                             var ri = itm['_ri']
                             var _uid = uid === false ? itm['_uid'] : uid
 
@@ -509,7 +646,7 @@ module.exports = (notify) => {
                     var updateData
                     if (method === 'all') {
                         // NOTE call back should return new data as an array
-                        var updatedData = this.grab_ref[uid] || no_uid_no_item
+                        var updatedData = originalFormat || no_uid_no_item
                         var updated = cb_sandbox(updatedData)
 
                         if (isArray(updateData)) {
@@ -530,6 +667,7 @@ module.exports = (notify) => {
 
                     var loopEach = (skipINX) => {
                         var initialData = (this.grab_ref[uid] || this.itemDataSet) || []
+                        if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
                         return initialData.map((z, i) => {
                             // means we are skipping callback for this index
@@ -550,7 +688,7 @@ module.exports = (notify) => {
                                 notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
                                 return null
                             }
-                            var dd = itemUpdated(u, i)
+                            var dd = itemUpdated(u, originalFormat[i]['_ri'])
                             return head(dd)
                         }).filter(z => z !== undefined)
                     }
@@ -581,7 +719,7 @@ module.exports = (notify) => {
                         }
                     }
 
-                    if (uid) delete this.grab_ref[uid]
+                    // if (uid) delete this.grab_ref[uid]
                     if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
 
                     if ((updateData || []).length) {
@@ -596,10 +734,10 @@ module.exports = (notify) => {
                             var _uid = uid === false ? updItem._uid : uid
                             if (!this.dataArch[_uid]) continue
 
-                            var ri = updItem._ri
-                            if (this.dataArch[_uid][ri]) {
-                                if (this.dataArch[_uid][ri]._uid === _uid) {
-                                    this.dataArch[_uid][ri] = updItem
+                            var itmPosIndex = updItem._ri
+                            if (this.dataArch[_uid][itmPosIndex]) {
+                                if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
+                                    this.dataArch[_uid][itmPosIndex] = updItem
                                 }
                             }
                         }
@@ -830,7 +968,7 @@ module.exports = (notify) => {
                 for (var k in this.batchDataArch) {
                     if (indexOf(jobUIDS, k) !== -1 && this.batchDataArch[k]) {
                         delete this.batchDataArch[k]
-                    // console.log(`purged batchDataArch for uid ${k}`)
+                        // console.log(`purged batchDataArch for uid ${k}`)
                     }
                 }
 
@@ -1103,6 +1241,16 @@ module.exports = (notify) => {
                 return n
             }, {})
             if (err_format !== null) throw (`dataArch format invalid for: ${err_format}`)
+
+            // NOTE
+            // assign prototype to each job
+            // will make sure that `_ri` and `_uid` cannot be changed or overriten
+            for (var uid in v) {
+                if (!v.hasOwnProperty(uid)) continue
+                var job = v[uid]
+                var n = this.loopAssingMod(job)
+                if (n) v[uid] = n
+            }
 
             this._dataArch = v
         }
