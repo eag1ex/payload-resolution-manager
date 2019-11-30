@@ -54,7 +54,7 @@ module.exports = (notify) => {
                     var val = (p !== undefined && p !== null) ? p : null
                     all[prop] = {
                         value: val,
-                        //   writable: false,
+                        writable: true,
                         enumerable: true,
                         configurable: false
                     }
@@ -681,14 +681,20 @@ module.exports = (notify) => {
                             if (this.autoComplete) {
                                 u.complete = true
                             }
-
                             if (u) u = flatMap([u])
 
                             if (u.length > 1 || !isArray(u)) {
                                 notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
                                 return null
                             }
-                            var dd = itemUpdated(u, originalFormat[i]['_ri'])
+                            var dd
+
+                            try {
+                                dd = itemUpdated(u, originalFormat[i]['_ri'])
+                            } catch (err) {
+                                console.log('-- itemUpdated err', err)
+                            }
+
                             return head(dd)
                         }).filter(z => z !== undefined)
                     }

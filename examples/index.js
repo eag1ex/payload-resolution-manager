@@ -4,7 +4,7 @@
 const notify = require('../libs/notifications')()
 const PayloadResolutioManager = require('../payload.resolution.manager')(notify)
 var debug = true
-const resx = new PayloadResolutioManager(debug,{ onlyComplete: true, batch:true })
+const resx = new PayloadResolutioManager(debug,{ autoComplete: true, batch:true })
 
 var exampleData = (id = 0) => {
     var data = {
@@ -22,14 +22,14 @@ var exampleData = (id = 0) => {
 
 notify.ulog(`uncomment each example to see the output in console`)
 
-const job_1 = require('./job_1')(resx,exampleData,notify)
-notify.ulog({ job_1 })
+// const job_1 = require('./job_1')(resx,exampleData,notify)
+// notify.ulog({ job_1 })
 
 // const job_2 = require('./job_2')(resx,exampleData,notify)
 // notify.ulog({ job_2 })
 
-// const job_3 = require('./job_3')(resx,exampleData,notify)
-// notify.ulog({ job_3 })
+const job_3 = require('./job_3')(resx,exampleData,notify)
+notify.ulog({ job_3 })
 
 
 
