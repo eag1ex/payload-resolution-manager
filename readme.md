@@ -12,7 +12,7 @@
  - Lodash, ES6, javascript, node.js
 
 ##### Usage
-- Examples in the `index.js`, simply uncomment each one.
+- Examples in `./examples/index.js and ./examples/app.example.js`
 
 
 ##### Features:
