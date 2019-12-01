@@ -4,8 +4,8 @@
  * We declared 3 jobs and did some computation to update original data states, the 3rd jobs is delayed. all jobs are returned
  * using `batchResolution`
  */
-const notify = require('./libs/notifications')()
-const PRM = require('./libs/prm/payload.resolution.manager')(notify)
+const notify = require('../libs/notifications')()
+const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
 const options = {
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
@@ -79,20 +79,15 @@ var delayedJob = (() => {
     })
 })()
 
-// can also use callback to check every 100 mils
 prm.batchResolution([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
 
-// delayedJob.then(d => {
-//     var batch = prm.batchResolution([job50, job60, job70])
-//     notify.ulog({ batch, message: 'delayed results' })
-
 /**
      * returns..
-  [ { name: 'mayson', age: 37, status: 'updated' },
-     { name: 'bradly', age: 82, status: 'updated' },
-     { name: 'andrew', age: 73, status: 'updated' },
+    [ { name: 'mayson', age: 37, status: 'updated' },
+     { name: 'bradly', age: 83, status: 'updated' },
+     { name: 'andrew', age: 75, status: 'updated' },
      { name: 'alex', surname: 'anonymous', age: 20 },
      { name: 'jackie', surname: 'anonymous', age: 33 },
      { name: 'max', surname: 'anonymous', age: 46 },
