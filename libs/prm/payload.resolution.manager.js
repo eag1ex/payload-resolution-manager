@@ -371,6 +371,9 @@ module.exports = (notify) => {
             }
         }
 
+        askLast() {}
+
+
         /**
          * @computation
          * - do custom computation and update each data in realtime uppon resolution and return
