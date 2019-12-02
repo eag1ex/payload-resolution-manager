@@ -20,7 +20,7 @@
 
 
 ##### Features:
-- This application supports chaining of methods, example:
+* This application supports chaining of methods, example:
 
 ```
 /**
