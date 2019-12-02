@@ -21,6 +21,7 @@
 
 ##### Features:
 - This application supports chaining of methods, example:
+
 ```
 /**
  * Application, advance chaining example
@@ -124,7 +125,7 @@ prm.batchRes([job50, job60, job70], 'flat', d => {
 })
 
 /**
-     * returns..
+    // returns..
     [ { name: 'alex', age: 20 },
      { name: 'jackie', age: 32 },
      { name: 'daniel', age: 55 },
@@ -140,7 +141,8 @@ prm.batchRes([job50, job60, job70], 'flat', d => {
      { name: 'andrew', age: 75, status: 'updated' },
      { name: 'alex', surname: 'anonymous', age: 21 },
      { name: 'jackie', surname: 'anonymous', age: 34 } ],
-     */
+**/
+
 ```
 
 ##### Methodes explained:
