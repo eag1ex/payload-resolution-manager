@@ -8,11 +8,11 @@ module.exports = (PRM, exampleData, notify) => {
     var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 3,4,5
     var d4 = ['a', null, false] // _ri = 6,7,8
 
-    var nn = PRM.setupData(d1, uid)
-        .setupData(d2)
-        .setupData(d3) // add data to this item
-        // .setupData(exampleData(5), 'index11')
-        .computation(item => {
+    var nn = PRM.set(d1, uid)
+        .set(d2)
+        .set(d3) // add data to this item
+        // .set(exampleData(5), 'index11')
+        .compute(item => {
             // NOTE do some calculation for `each` item, must return 1 item
             // if (item._ri===0) // do something
             item.dataSet.age += 20
@@ -23,9 +23,9 @@ module.exports = (PRM, exampleData, notify) => {
             return item
         }, 'each') // ignored.. We are chaining only one job
         // if provided `index11` internal value will change, need to specify what to resolution
-        .markDone(uid) // ignore setupData for uid:job_1 from future updates
-        .setupData(d4, 'job_2')
-        .computation(item => {
+        .markDone(uid) // ignore set for uid:job_1 from future updates
+        .set(d4, 'job_2')
+        .compute(item => {
             item.dataSet = 50
             item.complete = true
             return item

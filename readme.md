@@ -1,12 +1,16 @@
 #### [ Developed by Eaglex ](http://eaglex.net)
-##### Name: Payload Resolution Manager
+##### Name: Payload Resolution Manager (PRM)
 * License: `CC BY` 
 
 #### Description
-- Easy to use Micro toolkit for your data handling
-- You are issuing many async calls and want to track all requests by uniq id.
-- Individual sets of data[index] that maybe worked on independently (out-of-order) will be tracked with resolution index (`_ri`).
- * `Example` You issued 20 requests, each request is 5 data sets [x5]. Because all 20 requests are issued at the same time, each will be out-of-order, we can track then with resolution index, and correctly collect data in the end.
+- Easy to use Micro Service for async data handling with Node.js
+- Perhaps you manage many data sources and want to make sure they are in-sync and correct order 
+- Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index (`_ri`), and job id (`_uid`)
+- 
+- You can setup timely job batches for any number of jobs to be called when done.
+
+ * `For example` You issued 20 job requests, each 5 data sets [x5]. Since all requests are issued at different times, each will be out-of-order, `PRM` will track then with resolution index, and collect data by `_uid` in the end.
+
 
 ##### Stack
  - Lodash, ES6, javascript, node.js
@@ -18,27 +22,35 @@
 ##### Features:
 - This application supports chaining of methods, example:
 ```
+/**
+ * Application, advance chaining example
+ * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
+ * using `batchRes`
+ */
+const notify = require('../libs/notifications')()
+const PRM = require('../libs/prm/payload.resolution.manager')(notify)
+
 const options = {
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
-    batch: true, // after running `resolution` method, each job that is batched using `batchResolution([jobA,jobB])`, only total batch will be returned when ready
-    finSelf: true, // allow chaning multiple resolution
-    autoComplete: true // auto set complete on every computation iteration within `each` call
+    batch: true, // after running `resolution` method, each job that is batched using `batchRes([jobA,jobB,jobC])`, only total batch will be returned when ready
+    resSelf: true, // allow chaning multiple resolution
+    autoComplete: true // auto set complete on every compute iteration within `each` call
 }
-
-const prm = new PRM(true, options)
+const debug = true
+const prm = new PRM(debug, options)
 var job50 = 'job_50'
 var job60 = 'job_60'
-
+var job70 = 'job_70'
 var d1 = [{ name: 'alex', age: 20 }, { name: 'jackie', age: 32 }] // _ri = 0,1
 var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 2,3
 var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 4,5,6
 var d4 = [{ name: 'mayson', age: 27 }, { name: 'bradly', age: 72 }, { name: 'andrew', age: 63 }] // _ri = 0,1,2
 
-var d = prm.setupData(d1, job50)
-    .setupData(d2)
-    .setupData(d3)
-    .from(3) // will only make computations starting from(number)  < `_ri` index
-    .computation(item => {
+var d = prm.set(d1, job50)
+    .set(d2)
+    .set(d3)
+    .from(3) // will only make computes starting from(number)  < `_ri` index
+    .compute(item => {
         // if (item._ri === 3) {
         //  item._uid = '10000_error' // protected cannot be changed
         //  item._ri = '-50'  // protected cannot be changed
@@ -49,11 +61,10 @@ var d = prm.setupData(d1, job50)
         return item
     }, 'each')
 // .markDone() // no future changes are allowed to `job_50`
-
-    .setupData(d1, job60)
-    .computation(items => {
+    .set(d1, job60)
+    .compute(items => {
         var allNewItems = items.map((zz, inx) => {
-            return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx }
+            return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx + 1 }
         })
         // return value need to match total length of initial job
         return allNewItems
@@ -61,10 +72,10 @@ var d = prm.setupData(d1, job50)
 
     .of(job50) // of what job
     .from(5) // from what `_ri` index
-    .computation(item => {
+    .compute(item => {
         // make more changes to job_50, starting from `_ri` index 5
         return item
-    })
+    }, 'each')
 // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
     .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
     /**
@@ -76,15 +87,14 @@ var d = prm.setupData(d1, job50)
 notify.ulog({ job60: d })
 
 /**
- * NOTE
- * here is where power of PRM Framework comes in.
- * below is an async job uid:`job_50` which we still havent resolved, we can make  more changes
- */
+* PRM Framework can handle delayed jobs very well
+* below is an async job uid:`job_50` which hasnt resolved, so we can make more changes
+*/
 /// update job50 again
 setTimeout(() => {
     var d = [{ name: 'danny', age: 15 }, { name: 'jane', age: 33 }, { name: 'rose', age: 25 }] // _ri =  7, 8 ,9
-    prm.setupData(d, job50)
-        .computation(item => {
+    prm.set(d, job50)
+        .compute(item => {
             if (item._ri >= 7) {
                 item.dataSet.message = 'job delayed and updated'
             }
@@ -93,52 +103,83 @@ setTimeout(() => {
         .resolution()
 }, 2000)
 
+var delayedJob = (() => {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            prm.set(d4, job70)
+                .compute(items => {
+                    return items.map((zz, inx) => {
+                        var orVals = zz.dataSet
+                        return Object.assign({}, orVals, { status: 'updated', age: orVals.age + 10 + inx })
+                    })
+                }, 'all')
+                .resolution()
+            resolve(true)
+        }, 500)
+    })
+})()
 
-prm.batchResolution([job50, job60], 'flat', d => {
+prm.batchRes([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
-/// //////////////////////////
+
+/**
+     * returns..
+    [ { name: 'alex', age: 20 },
+     { name: 'jackie', age: 32 },
+     { name: 'daniel', age: 55 },
+     { name: 'john', age: 70, occupation: 'retired' },
+     { name: 'max', age: 70, occupation: 'retired' },
+     { name: 'smith', age: 70, occupation: 'retired' },
+     { name: 'jane', age: 70, occupation: 'retired' },
+     { name: 'danny', age: 15, message: 'job delayed and updated' },
+     { name: 'jane', age: 33, message: 'job delayed and updated' },
+     { name: 'rose', age: 25, message: 'job delayed and updated' },
+     { name: 'mayson', age: 37, status: 'updated' },
+     { name: 'bradly', age: 83, status: 'updated' },
+     { name: 'andrew', age: 75, status: 'updated' },
+     { name: 'alex', surname: 'anonymous', age: 21 },
+     { name: 'jackie', surname: 'anonymous', age: 34 } ],
+     */
 ```
 
-
 ##### Methodes explained:
-* `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a model prototype of `PrmProto` class instance, vals: `_uid, _ri` are protected and cannot be overriten to make sure fluency and consistency of data flow and prone errors. Only values which can be changed are `dataSet, _timestamp, complete`. 
-* `uid:String`: Must provide uid for every data asset, per job. If you do not specify, it will first try to find last used uid.
-* `data[...]`: Every job you provide must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
-* `setupData(data:Array,uid:String)`: Provide your request data as array (can be single array),with uniq identifier,
-this item will be saved by reference in class variable with `_ri` and `_uid` . You can provide concurent `setupData` for the same `uid` via chaining or by line, up to you, this item will then be updated in the class scope.
+* `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of `PrmProto` instance, props: `_uid, _ri` are protected and cannot be overriten to make sure of consistency and prone errors. Only  `dataSet, _timestamp, complete` props can be changed. 
+* `uid:String`: Provide uid for every data asset, per job. If not specified, will  try to find last used uid.
+* `data[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
+* `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
+this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 
-* `markDone(uid:String)`: Provide this call after any `setupData`, and it will make sure no other changes are allowed to this items/dataSet's - any subsequent calls to `setupData` will be ignored.
+* `markDone(uid:String)`: Provide after any `set`, and will make sure no other changes are allowed to this job - any subsequent calls will be ignored.
 
-* `updateDataSet(uid,newDataSet,type)` : update item dataSet targted via `_ri` together with `uid` 
+* `updateDataSet(uid,_ri, newDataSet,type)` : update job, targted via `_ri` together with `uid` 
      - `newDataSet` can be any data, example: {},[],1,true, except for null
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
-* `updateSetup(newData,uid)` : provide raw data produced by `setupData` or use `getItem(uid)` to return it. Will update only dataSet[..], will not grow the items array.
+* `updateSet(newData,uid)` : provide raw data produced by `set` or use `getSet(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
-* `batchResolution(jobUIDS=[], type:string)`: You want to wait until specific jobs have been completed. Each job in batch is set uppon resolution is called, each time it will check if all your batch uids are set, and will return your batch 
-     - `jobUIDS` :specify job uids which you are working on
-     - `type`: can return as `flat` array, or `grouped` object
+* `batchRes(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
+     - `jobUIDS` :specify working job uids
+     - `type`: can return as `flat`> array, or `grouped`> object
+     - `cb:` when ready returns callback
 
-* `resolution(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: Last method you call when everything is done for your job.
-     - `yourData`:optional, you wish to provide data from outside scope and know the format is correct, you can declare it instead. example: `yourData{ uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
+* `resolution(yourData:Object,uid:String,dataRef:String,doDelete:boolean )`: When ready call this to complete the job.
+     - `yourData`:optional, provide data from outside source in correct format, example: `yourData {uid:[{dataSet},_ri,_uid],... }`, otherwise provide `null`
      - `dataRef` your data is from external source:yourData, you have the option to provide `dataRef` if its other then `dataSet`
-     - `doDelete:true` will always delete the job from class cache after its finilized, you have the option not to delete it! 
-* `computation(callback(), method='all',uid)`: use this method to perform data calculation for each `uid`.
-     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` will loop thru each item sequently,  must return 1 item. If you do not know your uid and want to use `each` methog, you must set `this.itemDataSet` to update callback, for more clear explenation, take a look at `index.js` examples
-     - `uid`: provide uid for data if not chaining. When `uid`=null, will look for last used uid, when uid is anonymous  because data was returned radomly, must provide dataSet format wrapped with {dataSet[],_uid,_ri} so method can search thru it and match available uid's 
+     - `doDelete:true` will delete the job from class cache after finilized, you have the option not to delete it! 
+* `compute(callback(), method='all',uid)`: use this method to perform data calculation for each `job:uid`.
+     - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` will loop thru each item sequently,  must return 1 item. If you do not know your uid and want to use `each`, you must set `this.itemDataSet` to update callback, for clear explanation, take a look at examples in `./examples/index.js`
+     - `uid`: provide for data if not chaining, or switching to another job. When `uid`=null it will look for last used. If anonymous, because your data was async, must provide `formated()` > with {dataSet[],_uid,_ri} so it can search thru and match available. 
+* `getSet(uid,self:boolean)`:  return data for desired `uid` in formated state.
+     - `self:true`: you can chain this method. Then you must provide: getSet(...).d  to return it.
 
-* `getItem(uid,self:boolean)`:  return data for desired `uid` in raw state, with `_uid`, `_ri` and `dataSet`.
-     - `self`: when provided you can chain this method. To return, you must provide: getItem(...).d (if self is set:true)
+* `formated(data[...], uid, external, clean)` : for some reason you want to make sure your data is correct. Provide job[...] as previously initialized with `set`. Does not update or change any internal class states.
+     - `external:boolean` If its an external data that is not yet available in the class, will ignore validation.
 
-* `itemFormated(data[...], uid, dataRef, external, clean)` : for some reason you want to make sure your data is correct and return clean state. Provide data[...] as previously initialized with `setupData`. Does not update or change any internal states.
-     - `dataRef:string` Provide different reference other then `dataSet`
-     - `external:boolean` If its an external data that is not yet available in the class.
-
-* `deleteSet(uid, force:true)`: you require some hacking, manualy delete cache and history from the class, specify `force=true` to delete all data.
+* `delSet(uid, force:true)`:  manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 ###### Beta Tools
-* `of(uid)`: when chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` would start tracking from this job
-* `from(ri)` : when valid against last `uid` will only return items starting from that index when using `computation` method
+* `of(uid)`: chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` > to start tracking from this job
+* `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`
 
 
 ##### Example output:

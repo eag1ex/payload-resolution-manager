@@ -7,13 +7,13 @@ module.exports = (PRM, exampleData, notify) => {
     var d4 = ['a', null, false] // _ri = 6,7,8
 
     var uid = 'job_2'
-    var nn = PRM.setupData(d1, uid) // add
-    PRM.setupData(d2) // add
-        .setupData(d3) // add
+    var nn = PRM.set(d1, uid) // add
+    PRM.set(d2) // add
+        .set(d3) // add
 
     // we update only 3 items
 
-    var nn2 = PRM.computation(item => { // compute so far
+    var nn2 = PRM.compute(item => { // compute so far
         /**
          * NOTE
          *  allow query without job `uid`, we set `this.itemDataSet=[{dataSet, _uid,_ri},...]`
@@ -34,8 +34,8 @@ module.exports = (PRM, exampleData, notify) => {
         item.complete = true
         return item
     }, 'each') // anonymous uid, check `itemDataSet` first!
-        .markDone(/* uid */) // will ignore setupData for uid:job_2 from future updates
-        .setupData(d4)
+        .markDone(/* uid */) // will ignore set for uid:job_2 from future updates
+        .set(d4)
         .resolution()
 
     /**

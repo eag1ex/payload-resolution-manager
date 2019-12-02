@@ -26,7 +26,7 @@ module.exports = (notify) => {
 
         /**
          * @of
-         * in case you are jugling between computations and do not want to change uid position
+         * in case you are jugling between compute and do not want to change uid position
          * will reset next query to return that job only once.
          * `UID` if not set nothing will be changed
          */
@@ -43,7 +43,7 @@ module.exports = (notify) => {
 
         /**
          * @from
-         *  in case you are jugling between computations
+         *  in case you are jugling between compute
          * will reset next query to return last job from specified `_ri` position only once
          * `RI` if not set nothing will be chenged
          */
@@ -74,11 +74,12 @@ module.exports = (notify) => {
             // if `hard` is set any invalid dataSet will be unset
             // if `soft` is set original dataSet will be kept
             this.invalidType = opts.invalid || 'soft' // `soft` or `hard`
-            this.finConditions = opts.onlyComplete || null // when set resolution will only resolve items that are marked as complete
+
             this.batch = opts.batch || null
-            this.finSelf = opts.finSelf || null // if true resolution will return self instead of value
+            this.resSelf = opts.resSelf || null // if true resolution will return self instead of value
+            this.onlyComplete = opts.onlyComplete || null // when set resolution will only resolve items that are marked as complete
             // when using batch onlyComplete is reset, because we complete each job once a batch of jobs is all complete
-            this.autoComplete = opts.autoComplete || null // when set after performing computation for `each` every item iteration will automaticly be set with `complete`, when not set, you have to apply it each time inside every computation callback
+            this.autoComplete = opts.autoComplete || null // when set after performing compute for `each` every item iteration will automaticly be set with `complete`, when not set, you have to apply it each time inside every compute callback
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
             }
@@ -96,9 +97,9 @@ module.exports = (notify) => {
             this._lastUID = null // last updated uid
             this._lastItemData = null // last updated at `resolution` methode
             this.singleSet = null // return only set that was updated
-            this.d = null // updated via `setupData` methode
+            this.d = null // updated via `set` methode
             // once all data for each payload resolution is set to be worked on, we mark it as true
-            // grab last data returned by `setupData`
+            // grab last data returned by `set`
             this.grab_ref = {
                 // uid > this.d
             }
@@ -213,23 +214,23 @@ module.exports = (notify) => {
         //     if (uid !== false) this.valUID(uid)
         // }
         /**
-         * @setupData
+         * @set
          * `uid` must specify uid which will identify this dataSet
          * `data` must provide an array
          * - with wrap your payload as array in resolution format
          */
-        setupData(data, uid) {
+        set(data, uid) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
             this.valUID(uid)
 
             if (this.dataArchSealed[uid]) {
-                if (this.debug) notify.ulog('[setupData] data already sealed cannot update', true)
+                if (this.debug) notify.ulog('[set] data already sealed cannot update', true)
                 return this
             }
 
             this.d = this.setRequestPayload(data, uid)
-                .getItem(uid) // return item dataSet[...]
+                .getSet(uid) // return item dataSet[...]
 
             this.d = this.loopAssingMod(this.d)
 
@@ -300,12 +301,12 @@ module.exports = (notify) => {
         }
 
         /**
-         * @updateSetup
-         * update itemDataSet only, if previously set by `setupData` !
+         * @updateSet
+         * update itemDataSet only, if previously set by `set` !
          * does not grow item, only preplace with new data
-         * `newData` must provide raw data returned from `setupData` or use `getItem(uid)` and return it here
+         * `newData` must provide raw data returned from `set` or use `getSet(uid)` and return it here
          */
-        updateSetup(newData, uid) {
+        updateSet(newData, uid) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -369,7 +370,9 @@ module.exports = (notify) => {
                 if (!isObject(itm) && !isArray(itm)) break
 
                 // update `item`
-                this.dataArch[uid].map(z => {
+
+                for (var ii = 0; ii < this.dataArch[uid].length; ii++) {
+                    var z = this.dataArch[uid][ii]
                     if (z._uid === itm._uid && z._ri === itm._ri) {
                         dataRef = dataRef || 'dataSet'
                         var el = {}
@@ -386,7 +389,7 @@ module.exports = (notify) => {
                             el['_timestamp'] = z._timestamp
                         } else {
                             if (this.debug) notify.ulog(`ups no dataSet, other then _uid/_ri are available for update!, nothing done`, true)
-                            return null
+                            break
                         }
 
                         if (!isEmpty(el)) {
@@ -396,20 +399,14 @@ module.exports = (notify) => {
                             }
                             item.push(el)
                         }
+                        break
                     }
-                })
-            }
+                } // if
+            }// for
+
             if (item.length) {
                 return item
-            }
-            // var pass_ok = this.resIndex[uid].filter(z => {
-            //     return matched_ris.filter(n => z === n).length
-            // }).filter(z => z !== undefined).length === this.resIndex[uid].length
-
-            // if (pass_ok) {
-            //     return item
-            // } else {
-            else {
+            } else {
                 if (this.debug) notify.ulog('resIndex did not match newData', true)
                 return null
             }
@@ -421,7 +418,7 @@ module.exports = (notify) => {
 
         /**
          * @itemDataSet
-         * for use with computation for `each` callback when uid===false or not provided
+         * for use with compute for `each` callback when uid===false or not provided
          * must return an array of item/s with valid `dataSet`, `_ri` and `_uid`
          */
         set itemDataSet(v) {
@@ -456,14 +453,14 @@ module.exports = (notify) => {
         }
 
         /**
-         * @computation
-         * - do custom computation and update each data in realtime uppon resolution and return
+         * @compute
+         * - do custom compute and update each data in realtime uppon resolution and return
          * `callback` can access item data to munipulate, must return same array size
-         * `uid` if set null will try to use last available, if uid is still undefind >computation will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with provided in `setupData`
+         * `uid` if set null will try to use last available, if uid is still undefind >compute will initially extract all available `UIDs` from provided data and update independently, if more then 1 found, will also check that those match with provided in `set`
          * `method` there are 2 types: `each` and `all` as name suggests callback will be performend on every item[x] or only once for all
          * `itemDataSet:` when we want to use `each` callback when `uid` is anonymous/unset, we need to update dataSet first, to be able to loop thru it later.
          */
-        computation(cb, method = 'all', uid) {
+        compute(cb, method = 'all', uid) {
             if (!uid && uid !== false) uid = this._lastUID
             else if (uid !== false) this._lastUID = uid
 
@@ -536,7 +533,7 @@ module.exports = (notify) => {
                                 if (!z.dataSet) {
                                     itm = setNewForTypeAll(z, originalFormat[i])
                                     // if no dataSet lets remake last before update
-                                    //  if (this.debug) notify.ulog(`[computation] .dataSet must be set for all user values or it will return null`)
+                                    //  if (this.debug) notify.ulog(`[compute] .dataSet must be set for all user values or it will return null`)
                                 } else {
                                     itm['_ri'] = z._ri !== undefined ? z._ri : i
                                     itm['_uid'] = z._uid || uid
@@ -582,14 +579,14 @@ module.exports = (notify) => {
                             var valid_dataItem = _uid ? this.dataArch[_uid][ri] : false
 
                             if (!valid_dataItem && uid === false) {
-                                if (this.debug) notify.ulog({ message: `[computation] we could not find any available uid for this index ${i}, changes omited` }, true)
+                                if (this.debug) notify.ulog({ message: `[compute] we could not find any available uid for this index ${i}, changes omited` }, true)
                                 if (this.invalidType === 'hard') {
                                     z.dataSet = null
                                 }
                                 return z
                             }
                             if (!valid_dataItem) {
-                                if (this.debug) notify.ulog({ message: `[computation] looks like _ri=${ri} for ${_uid} does not exist, changes omited` }, true)
+                                if (this.debug) notify.ulog({ message: `[compute] looks like _ri=${ri} for ${_uid} does not exist, changes omited` }, true)
 
                                 // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
                                 if (this.invalidType === 'hard') {
@@ -600,7 +597,7 @@ module.exports = (notify) => {
                             if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
                                 return itm
                             } else {
-                                if (this.debug) notify.ulog({ message: `[computation] matching error, changes omited`, uid }, true)
+                                if (this.debug) notify.ulog({ message: `[compute] matching error, changes omited`, uid }, true)
 
                                 if (this.invalidType === 'hard') {
                                     z.dataSet = null
@@ -620,7 +617,7 @@ module.exports = (notify) => {
 
                         if (isArray(updateData)) {
                             if (updateData.length !== this.resIndex[uid].length) {
-                                if (this.debug) notify.ulog('[computation], nothing updated, callback item does not match initial data size')
+                                if (this.debug) notify.ulog('[compute], nothing updated, callback item does not match initial data size')
                                 return this
                             }
                         }
@@ -629,13 +626,23 @@ module.exports = (notify) => {
 
                         // NOTE when computing make sure provided data matches our `_ri` and `_uid`                   /// validate `_ri && _uid`
                         var valid = this._validDataItem(updateData, uid)
-                        if (!valid) {
-                            if (this.debug) notify.ulog({ message: 'computation all option did not match all dataSets correctly, either uid length or ri are wrong' }, true)
+                        if (!valid && (valid || []).length !== originalFormat.length) {
+                            if (this.debug) notify.ulog({ message: 'compute all option did not match all dataSets correctly, either uid length or ri are wrong' }, true)
                         }
                     } // for all
 
                     var loopEach = (skipINX) => {
                         var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
+
+                        if (!isEmpty(this.itemDataSet) && isArray(this.itemDataSet)) {
+                            if (this.itemDataSet.length !== originalFormat.length) {
+                                if (this.debug) {
+                                    notify.ulog({
+                                        message: `[compute] itemDataSet should match job:uid ${uid} size, nothing changed` }, true)
+                                }
+                                return []
+                            }
+                        }
                         if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
                         return initialData.map((z, i) => {
@@ -646,14 +653,14 @@ module.exports = (notify) => {
 
                             // in case you retur array instead of single item
                             if (isArray(u)) u = head(u)
-                            // auto complete set on every computation iteration
+                            // auto complete set on every compute iteration
                             if (this.autoComplete) {
                                 u.complete = true
                             }
                             if (u) u = flatMap([u])
 
                             if (u.length > 1 || !isArray(u)) {
-                                notify.ulog(`[computation], each option you must return only 1 item per callback, nothing updated`, true)
+                                notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
                                 return null
                             }
                             var dd
@@ -702,7 +709,7 @@ module.exports = (notify) => {
                         for (var i = 0; i < updateData.length; i++) {
                             var updItem = updateData[i]
                             if (isEmpty(updItem)) {
-                                if (this.debug) notify.ulog(`[computation] warning item to update is empty, skipping`)
+                                if (this.debug) notify.ulog(`[compute] warning item to update is empty, skipping`)
                                 continue
                             }
 
@@ -759,10 +766,10 @@ module.exports = (notify) => {
         }
 
         /**
-         * @deleteSet
+         * @delSet
          * - delete set by `uid`
          */
-        deleteSet(uid, force = false) {
+        delSet(uid, force = false) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -775,7 +782,7 @@ module.exports = (notify) => {
             delete this.dataArch[uid]
             delete this.resIndex[uid]
 
-            // deleteSet is performed from resolution when option `doDelete is set`, followed by rest
+            // delSet is performed from resolution when option `doDelete is set`, followed by rest
 
             this.reset(uid, force)
 
@@ -830,13 +837,13 @@ module.exports = (notify) => {
         }
 
         /**
-         * @itemFormated
+         * @formated
          * - return formated data with `_uid` and `_ri` etc, if `clean=true`
          * - `uid` must already be available to format this item
          * - data will not be combined with `dataArch` chain
          * `external` when provided class will not check for size validation, but format must match
          */
-        itemFormated(data, uid, dataRef, external = null) {
+        formated(data, uid, external = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -847,7 +854,7 @@ module.exports = (notify) => {
             var validSize = data.length === this.resIndex[uid].length
 
             if (!validSize && !external) {
-                if (this.debug) notify.ulog(`[itemFormated] provided data size does not match the size of original payload!`, true)
+                if (this.debug) notify.ulog(`[formated] provided data size does not match the size of original payload!`, true)
                 return null
             }
 
@@ -857,7 +864,7 @@ module.exports = (notify) => {
                 var dataSet = d[i]
 
                 var o = {}
-                var df = dataRef || 'dataSet'
+                var df = 'dataSet'
                 o[df] = dataSet
                 o['_ri'] = i
                 o['_uid'] = uid
@@ -876,7 +883,7 @@ module.exports = (notify) => {
             this.valUID(uid)
             if (isEmpty(data)) return null
             if (!isArray(data)) return null
-            if (!this.finConditions) return null
+            if (!this.onlyComplete) return null
 
             var archJobSetCount = (this.dataArch[uid] || []).length
             var finalDataComplCount = 0
@@ -895,14 +902,14 @@ module.exports = (notify) => {
         }
 
         /**
-         * @batchResolution
+         * @batchRes
          * collect each completed job that belongs to a batch and return if all jobs are complete
          * after batch is returned only batch listed jobs are deleted from batchDataArch
          * `jobUIDS` specify jobUID's being worked on
          * `type` : can return as `flat` array or `grouped` object
          * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
          */
-        batchResolution(jobUIDS = [], type = 'flat', doneCB = null) {
+        batchRes(jobUIDS = [], type = 'flat', doneCB = null) {
             if (!isArray(jobUIDS)) return null
             if (!this.batch) return null
 
@@ -927,7 +934,7 @@ module.exports = (notify) => {
                     batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
                         if (indexOf(jobUIDS, k) !== -1) n = [].concat(el, n)
                         return n
-                    }, []).filter(z => !!z)
+                    }, []).filter(z => z !== undefined)
 
                     batchedJobs = flatMap(batchedJobs)
                 }
@@ -936,7 +943,7 @@ module.exports = (notify) => {
                     batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
                         if (indexOf(jobUIDS, k) !== -1) {
                             n[k] = [].concat(el, n[k])
-                            n[k] = n[k].filter(z => !!z)
+                            n[k] = n[k].filter(z => z !== undefined)
                         }
                         return n
                     }, {})
@@ -982,10 +989,10 @@ module.exports = (notify) => {
             // `yourData` may no longer have `[dataSet]` per object item, you may provide `dataRef` instead
             // will validate all payload items against `resIndex`
 
-            if (this.finSelf) this.d = null
+            if (this.resSelf) this.d = null
 
             var returnAS = (output) => {
-                if (this.finSelf) {
+                if (this.resSelf) {
                     this.d = output
                     return this
                 } else return output
@@ -1007,7 +1014,7 @@ module.exports = (notify) => {
 
             var providerData = isObject(yourData) && !isArray(yourData) ? yourData : this.dataArch
             providerData = cloneDeep(providerData)
-            // setupData
+            // set
             // cycle thru each reference
             for (var k in providerData) {
                 if (!providerData.hasOwnProperty(k)) continue
@@ -1020,6 +1027,12 @@ module.exports = (notify) => {
                     continue
                 }
                 if (!isArray(itemDataSets)) throw ('provided itemDataSets must be an array!')
+                if (yourData) {
+                    // if provided your own source just make sure we set it to compelete
+                    itemDataSets.forEach((job, inx) => {
+                        job.complete = true
+                    })
+                }
 
                 fData = [].concat(perDataSet(itemDataSets, uid), fData)
             }
@@ -1031,7 +1044,7 @@ module.exports = (notify) => {
                 return returnAS(null)
             }
             if (!fData.length) {
-                if (doDelete) this.deleteSet(uid)
+                if (doDelete) this.delSet(uid)
                 if (this.debug) notify.ulog({ message: '[resolution] fData[] no results' }, true)
                 this.reset(uid)
                 return returnAS([])
@@ -1075,14 +1088,14 @@ module.exports = (notify) => {
                         var itm = fData[n][anonymousKey]
 
                         // NOTE if set resolution will only take to accout all dataSets that are marked as `complete`
-                        if (this.finConditions === true) {
+                        if (this.onlyComplete === true) {
                             if (fData[n].complete === true && itm !== undefined) {
                                 output.push(itm)
                                 continue
                             }
                         }
 
-                        if (itm !== undefined && !this.finConditions) {
+                        if (itm !== undefined && !this.onlyComplete) {
                             output.push(itm)
                             continue
                         }
@@ -1095,22 +1108,22 @@ module.exports = (notify) => {
                     // in case we marked `onlyComplete` as an option, but data still exists and not completed
                     // so do not delete
                     if (!isEmpty(output)) {
-                        this.deleteSet(uid)
+                        this.delSet(uid)
                     }
                 } else if (doDelete) {
                     // NOTE per above note
                     if (!isEmpty(output)) {
-                        this.deleteSet(uid)
+                        this.delSet(uid)
                     }
                 }
 
                 /**
-                 * when `finConditions` is set it will only collect job completed items
+                 * when `onlyComplete` is set it will only collect job completed items
                  * when `batch` is set each batch item will be stored in `batchDataArch`
                  */
                 if (this.batch && !isEmpty(output)) {
                     this.batchDataArch[uid] = [].concat(output, this.batchDataArch[uid])
-                    this.batchDataArch[uid].filter(z => !!z)
+                    this.batchDataArch[uid] = this.batchDataArch[uid].filter(z => z !== undefined)
                     this.batchCB(uid) // set
                 }
 
@@ -1120,7 +1133,7 @@ module.exports = (notify) => {
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)
                 notify.ulog({ message: '[resolution] falied to match resIndex', failed_index, uid })
-                if (doDelete) this.deleteSet(uid)
+                if (doDelete) this.delSet(uid)
                 this.reset(uid)
                 return returnAS(null)
             }
@@ -1146,7 +1159,7 @@ module.exports = (notify) => {
                     var d = this._resolution_item(externalData, uid[i], dataRef, doDelete)
                     items[uid] = d
                 }
-                if (this.finSelf) {
+                if (this.resSelf) {
                     this.d = d
                     return this
                 } else return d
@@ -1175,9 +1188,13 @@ module.exports = (notify) => {
             }
             this.dataArchSealed[uid] = true
 
+            if (this.autoComplete || this.onlyComplete) {
+                this.dataArch[uid].forEach((job, inx) => {
+                    job.complete = true
+                })
+            }
             // and remove all write privileges from dataSet's
             this.dataArch[uid] = this.loopAssingMod(cloneDeep(this.dataArch[uid]), { enumerable: true, writable: false, configurable: true }, true)
-
             return this
         }
 
@@ -1213,7 +1230,7 @@ module.exports = (notify) => {
             this._fromRI = null
 
             if (isEmpty(dataArch_copy)) {
-                if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
+                // if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
                 return this.dataArch[this._lastUID]
             }
 
@@ -1399,11 +1416,11 @@ module.exports = (notify) => {
         }
 
         /**
-         * @getItem
+         * @getSet
          * `uid` must provide uid
-         * `_self`  optional, if set specify `getItem.d` to return items data
+         * `_self`  optional, if set specify `getSet.d` to return items data
          */
-        getItem(uid, _self) {
+        getSet(uid, _self) {
             this.valUID(uid)
 
             this.d = null
@@ -1422,7 +1439,7 @@ module.exports = (notify) => {
             if (!_self) {
                 return cloneDeep(this.dataArch[uid])
             } else {
-                notify.ulog({ message: '[getItem] warning you cannot retrieve this items data, as it is not available', uid }, true)
+                notify.ulog({ message: '[getSet] warning you cannot retrieve this items data, as it is not available', uid }, true)
             }
             return null
         }
