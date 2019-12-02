@@ -6,9 +6,7 @@
 - Easy to use Micro Service for async data handling with Node.js
 - Perhaps you manage many data sources and want to make sure they are in-sync and correct order 
 - Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index (`_ri`), and job id (`_uid`)
-- 
 - You can setup timely job batches for any number of jobs to be called when done.
-
  * `For example` You issued 20 job requests, each 5 data sets [x5]. Since all requests are issued at different times, each will be out-of-order, `PRM` will track then with resolution index, and collect data by `_uid` in the end.
 
 
@@ -37,6 +35,7 @@ const options = {
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
 }
+
 const debug = true
 const prm = new PRM(debug, options)
 var job50 = 'job_50'
@@ -142,6 +141,7 @@ prm.batchRes([job50, job60, job70], 'flat', d => {
      { name: 'alex', surname: 'anonymous', age: 21 },
      { name: 'jackie', surname: 'anonymous', age: 34 } ],
 **/
+////////////////
 
 ```
 
