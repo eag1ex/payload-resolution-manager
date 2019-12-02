@@ -26,6 +26,7 @@
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
  * using `batchRes`
  */
+
 const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
@@ -56,8 +57,6 @@ var d = prm.set(d1, job50)
         //  item._ri = '-50'  // protected cannot be changed
         item.dataSet.age = 70
         item.dataSet.occupation = 'retired'
-        // } else item.dataSet.occupation = 'stock broker'
-        //  item.complete = true // because we set an option for `onlyComplete` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
         return item
     }, 'each')
 // .markDone() // no future changes are allowed to `job_50`
@@ -122,26 +121,6 @@ var delayedJob = (() => {
 prm.batchRes([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
-
-/**
-    // returns..
-    [ { name: 'alex', age: 20 },
-     { name: 'jackie', age: 32 },
-     { name: 'daniel', age: 55 },
-     { name: 'john', age: 70, occupation: 'retired' },
-     { name: 'max', age: 70, occupation: 'retired' },
-     { name: 'smith', age: 70, occupation: 'retired' },
-     { name: 'jane', age: 70, occupation: 'retired' },
-     { name: 'danny', age: 15, message: 'job delayed and updated' },
-     { name: 'jane', age: 33, message: 'job delayed and updated' },
-     { name: 'rose', age: 25, message: 'job delayed and updated' },
-     { name: 'mayson', age: 37, status: 'updated' },
-     { name: 'bradly', age: 83, status: 'updated' },
-     { name: 'andrew', age: 75, status: 'updated' },
-     { name: 'alex', surname: 'anonymous', age: 21 },
-     { name: 'jackie', surname: 'anonymous', age: 34 } ],
-**/
-////////////////
 
 ```
 
