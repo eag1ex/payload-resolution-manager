@@ -1335,7 +1335,7 @@ module.exports = (notify) => {
 
                     if (found.length) {
                         try {
-                        // delete double match from other data and keep only in relevence to uid test
+                            // delete double match from other data and keep only in relevence to uid test
                             this.dataArch[k] = other.filter(z => {
                                 return z._uid !== uid
                             })

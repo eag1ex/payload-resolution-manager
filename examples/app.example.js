@@ -53,7 +53,7 @@ var d = prm.setupData(d1, job50)
     .computation(item => {
         // make more changes to job_50, starting from `_ri` index 5
         return item
-    })
+    }, 'each')
 // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
     .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
     /**
@@ -104,21 +104,21 @@ prm.batchResolution([job50, job60, job70], 'flat', d => {
 
 /**
      * returns..
-    [ { name: 'alex', age: 20, occupation: 'stock broker' },
-     { name: 'jackie', age: 32, occupation: 'stock broker' },
-     { name: 'daniel', age: 55, occupation: 'stock broker' },
+    [ { name: 'alex', age: 20 },
+     { name: 'jackie', age: 32 },
+     { name: 'daniel', age: 55 },
      { name: 'john', age: 70, occupation: 'retired' },
-     { name: 'max', age: 44, occupation: 'stock broker' },
-     { name: 'smith', age: 66, occupation: 'stock broker' },
-     { name: 'jane', age: 35, occupation: 'stock broker' },
+     { name: 'max', age: 70, occupation: 'retired' },
+     { name: 'smith', age: 70, occupation: 'retired' },
+     { name: 'jane', age: 70, occupation: 'retired' },
      { name: 'danny', age: 15, message: 'job delayed and updated' },
      { name: 'jane', age: 33, message: 'job delayed and updated' },
      { name: 'rose', age: 25, message: 'job delayed and updated' },
      { name: 'mayson', age: 37, status: 'updated' },
      { name: 'bradly', age: 83, status: 'updated' },
      { name: 'andrew', age: 75, status: 'updated' },
-     { name: 'alex', surname: 'anonymous', age: 20 },
-     { name: 'jackie', surname: 'anonymous', age: 33 } ]
+     { name: 'alex', surname: 'anonymous', age: 21 },
+     { name: 'jackie', surname: 'anonymous', age: 34 } ],
      */
 // })
 
