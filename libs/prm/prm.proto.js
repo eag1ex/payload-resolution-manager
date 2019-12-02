@@ -89,7 +89,10 @@ module.exports = (notify) => {
         //     return model // Object.assign(PrmProto.prototype, model)
         // }
 
-        assign(dataSetItem, conf = { enumerable: true, writable: false, configurable: false }, strip = null) {
+        assign(dataSetItem, conf = null, strip = null, lock = null) {
+            var defaults = { enumerable: true, writable: false, configurable: false }
+            if (isEmpty(conf)) conf = defaults
+
             if (!isObject(dataSetItem) ||
                 isArray(dataSetItem) ||
                 isEmpty(dataSetItem) ||
@@ -123,7 +126,8 @@ module.exports = (notify) => {
                     }
 
                     // manual confing override
-                    if ((prop === '_uid' || prop === '_ri') && !_strip) {
+                    var test = !lock ? (prop === '_uid' || prop === '_ri') : true
+                    if (test && !_strip) {
                         if (!isEmpty(conf) && isObject(conf)) {
                             reduce(conf, (n, el, k) => {
                                 all[prop][k] = el
@@ -133,13 +137,12 @@ module.exports = (notify) => {
                             all[prop].enumerable = false
                             all[prop].configurable = false
                         }
-
-                        if (_strip) {
-                            // allow all changes and mods
-                            all[prop].writable = true
-                            all[prop].enumerable = true
-                            all[prop].configurable = true
-                        }
+                    }
+                    if (_strip) {
+                        // allow all changes and mods
+                        all[prop].writable = true
+                        all[prop].enumerable = true
+                        all[prop].configurable = true
                     }
 
                     return all

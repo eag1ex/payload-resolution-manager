@@ -13,8 +13,8 @@ const options = {
     finSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every computation iteration within `each` call
 }
-
-const prm = new PRM(true, options)
+const debug = true
+const prm = new PRM(debug, options)
 var job50 = 'job_50'
 var job60 = 'job_60'
 var job70 = 'job_70'
@@ -26,34 +26,34 @@ var d4 = [{ name: 'mayson', age: 27 }, { name: 'bradly', age: 72 }, { name: 'and
 var d = prm.setupData(d1, job50)
     .setupData(d2)
     .setupData(d3)
+    .from(3) // will only make computations starting from(number)  < `_ri` index
     .computation(item => {
-        if (item._ri === 3) {
-            //  item._uid = '10000_error' // protected cannot be changed
-            //  item._ri = '-50'  // protected cannot be changed
-            item.dataSet.age = 70
-            item.dataSet.occupation = 'retired'
-        } else item.dataSet.occupation = 'stock broker'
+        // if (item._ri === 3) {
+        //  item._uid = '10000_error' // protected cannot be changed
+        //  item._ri = '-50'  // protected cannot be changed
+        item.dataSet.age = 70
+        item.dataSet.occupation = 'retired'
+        // } else item.dataSet.occupation = 'stock broker'
         //  item.complete = true // because we set an option for `onlyComplete` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
         return item
     }, 'each')
-    // .markDone() // no future changes are allowed to `job_50`
-
-    // this change will be ignored!
-// .setupData(d2)
-    .computation(item => {
-        //   item.complete = true
-        return item
-    }, 'each')
-
+// .markDone() // no future changes are allowed to `job_50`
     .setupData(d1, job60)
 // .setupData(d3)
     .computation(items => {
         var allNewItems = items.map((zz, inx) => {
-            return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx }
+            return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx + 1 }
         })
         // return value need to match total length of initial job
         return allNewItems
     }, 'all')
+
+    .of(job50) // of what job
+    .from(5) // from what `_ri` index
+    .computation(item => {
+        // make more changes to job_50, starting from `_ri` index 5
+        return item
+    })
 // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
     .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
     /**

@@ -16,7 +16,56 @@ module.exports = (notify) => {
 
     const BatchCallbacks = require('./batch.callbacks')(notify)
 
-    class PayloadResolutioManager extends BatchCallbacks {
+    class PRMTOOLS extends BatchCallbacks {
+        constructor(debug, opts) {
+            super(debug, opts)
+            this.debug = debug
+            // PRMTOOLS
+            this._fromRI = null
+        }
+
+        /**
+         * @of
+         * in case you are jugling between computations and do not want to change uid position
+         * will reset next query to return that job only once.
+         * `UID` if not set nothing will be changed
+         */
+        of(UID) {
+            if (UID) this.valUID(UID)
+            else return this
+            if (!this.dataArch[UID]) {
+                if (this.debug) notify.ulog(`[of] UID invalid, not found`, true)
+                return this
+            }
+            this._lastUID = UID
+            return this
+        }
+
+        /**
+         * @from
+         *  in case you are jugling between computations
+         * will reset next query to return last job from specified `_ri` position only once
+         * `RI` if not set nothing will be chenged
+         */
+        from(RI) {
+            if (RI === undefined) return this
+            var _ri = Number(RI)
+            if (!isNumber(_ri)) {
+                if (this.debug) notify.ulog(`[from] RI must be a number, without decilams`, true)
+                return this
+            }
+
+            if (!this._lastUID) {
+                if (this.debug) notify.ulog(`[from] last uid not found, not sure where to start RI index`, true)
+                return this
+            }
+
+            this._fromRI = _ri
+            return this
+        }
+    }
+
+    class PayloadResolutioManager extends PRMTOOLS {
         constructor(debug, opts = {}) {
             super(debug)
             // resolution index
@@ -71,11 +120,16 @@ module.exports = (notify) => {
          * `config`: available options are: enumerable, writable configurable, and assigneld to `_uid` and `_ri`
          * `strip`: strip prototype from model
          */
-        assingMod(dataSetItem, config = {}, strip = null) {
-            if (!isEmpty(config)) return new PrmProto(this.debug).assign(dataSetItem, config, strip)
-            else {
+        assingMod(dataSetItem, config = {}, strip = null, lock = null) {
+            var isInstance = dataSetItem instanceof PrmProto
+            if (!isEmpty(config)) {
+                return new PrmProto(this.debug).assign(dataSetItem, config, strip, lock)
+            } else {
                 if (strip) return new PrmProto(this.debug).assign(dataSetItem, null, strip)
-                else return new PrmProto(this.debug).assign(dataSetItem)
+                else {
+                    if (isInstance) return dataSetItem
+                    else return new PrmProto(this.debug).assign(dataSetItem, null, null, lock)
+                }
             }
         }
 
@@ -85,15 +139,20 @@ module.exports = (notify) => {
          * `config` refer to assingMod
          * return mods Arr / null
          */
-        loopAssingMod(jobArr, config) {
+        loopAssingMod(jobArr, config, lock) {
             if (!isArray(jobArr)) return null
             var total = jobArr.length
 
             var modsArr = []
             for (var i = 0; i < jobArr.length; i++) {
                 var d
-                if (!isEmpty(config)) d = this.assingMod(jobArr[i], config)
-                else d = this.assingMod(jobArr[i])
+                var isInstance = jobArr[i] instanceof PrmProto
+                if (!isEmpty(config)) {
+                    d = this.assingMod(jobArr[i], config, null, lock)
+                } else {
+                    if (!isInstance) d = this.assingMod(jobArr[i], null, null, lock)
+                    else d = jobArr[i]
+                }
                 modsArr.push(d)
             }
             if (modsArr.length === total) return modsArr
@@ -147,6 +206,12 @@ module.exports = (notify) => {
             return true
         }
 
+        // lastUid() {
+        //     if (!uid && uid !== false) uid = this._lastUID
+        //     else if (uid !== false) this._lastUID = uid
+        //     if (this._ofUID && !uid) uid = this._ofUID
+        //     if (uid !== false) this.valUID(uid)
+        // }
         /**
          * @setupData
          * `uid` must specify uid which will identify this dataSet
@@ -165,6 +230,8 @@ module.exports = (notify) => {
 
             this.d = this.setRequestPayload(data, uid)
                 .getItem(uid) // return item dataSet[...]
+
+            this.d = this.loopAssingMod(this.d)
 
             this.grab_ref[uid] = this.d
             return this
@@ -213,10 +280,14 @@ module.exports = (notify) => {
                 var dataSets = this.dataArch[uid][i].dataSet
                 if (dataSets !== undefined) {
                     if (this.dataArch[uid][i]._ri === _ri) {
-                        if (type === 'new') this.dataArch[uid][i].dataSet = newDataSet
-                        if (type === 'merge') this.dataArch[uid][i].dataSet = merge(dataSets, newDataSet)
-                        this.dataArch = Object.assign({}, this.dataArch)
-                        updated = true
+                        try {
+                            if (type === 'new') this.dataArch[uid][i].dataSet = newDataSet
+                            if (type === 'merge') this.dataArch[uid][i].dataSet = merge(dataSets, newDataSet)
+                            this.dataArch = Object.assign({}, this.dataArch)
+                            updated = true
+                        } catch (err) {
+                            if (this.debug) notify.ulog(err, true)
+                        }
                     }
                 }
             }
@@ -237,6 +308,7 @@ module.exports = (notify) => {
         updateSetup(newData, uid) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
+
             this.valUID(uid)
 
             if (this.dataArchSealed[uid]) {
@@ -258,7 +330,16 @@ module.exports = (notify) => {
 
             var newItemDataSet = this._validDataItem(newData, uid)
             if (!isEmpty(newItemDataSet) && isArray(newItemDataSet)) {
-                this.dataArch[uid] = newItemDataSet
+                try {
+                    // assing for each valid
+                    newItemDataSet.forEach((job, inx) => {
+                        if (job._ri === this.dataArch[uid]._ri) {
+                            this.dataArch[uid][inx] = job
+                        }
+                    })
+                } catch (err) {
+                    if (this.debug) notify.ulog(err, true)
+                }
                 this.dataArch = Object.assign({}, this.dataArch)
                 this.d = cloneDeep(this.dataArch[uid])
                 return this
@@ -279,10 +360,10 @@ module.exports = (notify) => {
             var matched_ris = []
             if (!this.dataArch[uid]) return null
 
-            if (newData.length !== this.dataArch[uid].length) {
-                console.log('new d wrong len', newData)
-                return null
-            }
+            // if (newData.length !== this.dataArch[uid].length) {
+            //     console.log('new d wrong len', newData)
+            //     return null
+            // }
             for (var i = 0; i < newData.length; i++) {
                 var itm = newData[i]
                 if (!isObject(itm) && !isArray(itm)) break
@@ -318,14 +399,17 @@ module.exports = (notify) => {
                     }
                 })
             }
-
-            var pass_ok = this.resIndex[uid].filter(z => {
-                return matched_ris.filter(n => z === n).length
-            }).filter(z => z !== undefined).length === this.resIndex[uid].length
-
-            if (pass_ok) {
+            if (item.length) {
                 return item
-            } else {
+            }
+            // var pass_ok = this.resIndex[uid].filter(z => {
+            //     return matched_ris.filter(n => z === n).length
+            // }).filter(z => z !== undefined).length === this.resIndex[uid].length
+
+            // if (pass_ok) {
+            //     return item
+            // } else {
+            else {
                 if (this.debug) notify.ulog('resIndex did not match newData', true)
                 return null
             }
@@ -371,9 +455,6 @@ module.exports = (notify) => {
             }
         }
 
-        askLast() {}
-
-
         /**
          * @computation
          * - do custom computation and update each data in realtime uppon resolution and return
@@ -385,7 +466,9 @@ module.exports = (notify) => {
         computation(cb, method = 'all', uid) {
             if (!uid && uid !== false) uid = this._lastUID
             else if (uid !== false) this._lastUID = uid
+
             if (uid !== false) this.valUID(uid)
+
             if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
 
             if (this.dataArchSealed[uid] && uid !== false) {
@@ -420,7 +503,7 @@ module.exports = (notify) => {
                 // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
                 if (this.grab_ref[uid] || uid === false) {
                     // grab original references
-                    var originalFormat = this.grab_ref[uid]
+                    var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
 
                     var itemUpdated = (items, inx = null) => {
                         // double check if required values were supplied
@@ -552,7 +635,7 @@ module.exports = (notify) => {
                     } // for all
 
                     var loopEach = (skipINX) => {
-                        var initialData = (this.grab_ref[uid] || this.itemDataSet) || []
+                        var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
                         if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
                         return initialData.map((z, i) => {
@@ -629,7 +712,11 @@ module.exports = (notify) => {
                             var itmPosIndex = updItem._ri
                             if (this.dataArch[_uid][itmPosIndex]) {
                                 if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
-                                    this.dataArch[_uid][itmPosIndex] = updItem
+                                    try {
+                                        this.dataArch[_uid][itmPosIndex] = updItem
+                                    } catch (err) {
+                                        if (this.debug) notify.ulog(err, true)
+                                    }
                                 }
                             }
                         }
@@ -870,6 +957,7 @@ module.exports = (notify) => {
             if (typeof doneCB === 'function') {
                 this.batchCBDone(jobUIDS, () => {
                     var r = performResolution()
+                    if (r === null) return
                     doneCB(r)
                 })
 
@@ -1072,8 +1160,9 @@ module.exports = (notify) => {
 
         /**
          * @markDone
-         * - mark `dataArch`[index] as ready for work
+         * - mark `dataArch`[index] as ready for delivery
          * - you should set it just before return, or after async call!
+         * - will also mark all dataSets as readyOnly so cannot be modified!
          */
         markDone(uid) {
             if (!uid) uid = this._lastUID
@@ -1085,7 +1174,50 @@ module.exports = (notify) => {
                 return this
             }
             this.dataArchSealed[uid] = true
+
+            // and remove all write privileges from dataSet's
+            this.dataArch[uid] = this.loopAssingMod(cloneDeep(this.dataArch[uid]), { enumerable: true, writable: false, configurable: true }, true)
+
             return this
+        }
+
+        /**
+         * @dataArchWhich
+         * decide which `dataArch` index to return when using PRMTOOLS
+         */
+        dataArchWhich() {
+            const fromOK = this._fromRI !== undefined && this._fromRI !== null
+            const ofOK = this._lastUID !== undefined && this._lastUID !== null
+
+            if (!fromOK) {
+                return this.dataArch[this._lastUID]
+            }
+
+            var dataArch_copy = cloneDeep(this.dataArch)
+            if (ofOK) {
+                dataArch_copy = dataArch_copy[this._lastUID] // takes priority
+            }
+            if (fromOK && ofOK) {
+                var dataReduced = []
+                for (var i = 0; i < dataArch_copy.length; i++) {
+                    var job = dataArch_copy[i]
+                    if (!job) continue
+                    if (job._ri >= this._fromRI) {
+                        dataReduced.push(job)
+                    }
+                }
+                dataArch_copy = dataReduced
+            }
+
+            // reset every call
+            this._fromRI = null
+
+            if (isEmpty(dataArch_copy)) {
+                if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
+                return this.dataArch[this._lastUID]
+            }
+
+            return dataArch_copy
         }
 
         /**
@@ -1135,6 +1267,13 @@ module.exports = (notify) => {
             // assign prototype to each job
             // will make sure that `_ri` and `_uid` cannot be changed or overriten
             for (var uid in v) {
+                try {
+                    // sort
+                    v[uid] = v[uid].sort((a, b) => a._ri - b._ri)
+                } catch (err) {
+                    console.log('error sorting', err)
+                }
+
                 if (!v.hasOwnProperty(uid)) continue
                 var job = v[uid]
                 var n = this.loopAssingMod(job)
@@ -1195,10 +1334,14 @@ module.exports = (notify) => {
                     })
 
                     if (found.length) {
+                        try {
                         // delete double match from other data and keep only in relevence to uid test
-                        this.dataArch[k] = other.filter(z => {
-                            return z._uid !== uid
-                        })
+                            this.dataArch[k] = other.filter(z => {
+                                return z._uid !== uid
+                            })
+                        } catch (err) {
+                            if (this.debug) notify.ulog(err, true)
+                        }
                         arr = [].concat(arr, found)
                     }
                 }
@@ -1237,7 +1380,12 @@ module.exports = (notify) => {
 
                     if (mch.length) {
                         this._resIndex[uid] = [].concat(this._resIndex[uid], item._ri)
-                        this.dataArch[uid] = [].concat(this.dataArch[uid], item)
+                        try {
+                            this.dataArch[uid] = [].concat(this.dataArch[uid], item)
+                        } catch (err) {
+                            if (this.debug) notify.ulog(err, true)
+                        }
+
                         match_found = true
                         if (this.debug) notify.ulog({ message: 'updated item dataSet', _ri: item._ri })
                     }
