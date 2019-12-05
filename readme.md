@@ -3,11 +3,15 @@
 * License: `CC BY` 
 
 #### Description
-- Easy to use Micro Service for async data handling with Node.js
-- Perhaps you manage many data sources and want to make sure they are in-sync and correct order 
-- Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index (`_ri`), and job id (`_uid`)
-- You can setup timely job batches for any number of jobs to be called when done.
- * `For example` You issued 20 job requests, each 5 data sets [x5]. Since all requests are issued at different times, each will be out-of-order, `PRM` will track then with resolution index, and collect data by `_uid` in the end.
+* Easy to use Micro Service for async data handling with Node.js
+* Good for: 
+    - Sorting DATA at different states
+    - Referencing and assesing jobs status
+    - Validating results
+* Perhaps you manage many data sources and want to make sure they are in-sync and correct order 
+* Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index (`_ri`), and job id (`_uid`)
+* You can setup timely job batches for any number of jobs to be called when done.
+    - `For example` You issued 20 job requests, each 5 data sets [x5]. Since all requests are issued at different times, each will be out-of-order, `PRM` will track then with resolution index, and collect data by `_uid` in the end.
 
 
 ##### Stack
@@ -127,7 +131,7 @@ prm.batchRes([job50, job60, job70], 'flat', d => {
 ##### Methodes explained:
 * `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of `PrmProto` instance, props: `_uid, _ri` are protected and cannot be overriten to make sure of consistency and prone errors. Only  `dataSet, _timestamp, complete` props can be changed. 
 * `uid:String`: Provide uid for every data asset, per job. If not specified, will  try to find last used uid.
-* `data[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()] 
+* `data[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()]
 * `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 

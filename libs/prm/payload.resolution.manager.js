@@ -7,9 +7,8 @@
 
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, isFunction, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
-    const PrmProto = require('./prm.proto')(notify)
     // const prmMod = new PrmProto()
     // var item = { dataSet: { name: 'alex', age: 50 }, _ri: 0, _uid: 'job1', _timestamp: new Date().getTime() }
     // var m = prmMod.assign(item)
@@ -114,68 +113,6 @@ module.exports = (notify) => {
             return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
         }
 
-        /**
-         * @assingMod
-         * assing prototype to each dataSet item
-         * `dataSetItem`: must provide valid object
-         * `config`: available options are: enumerable, writable configurable, and assigneld to `_uid` and `_ri`
-         * `strip`: strip prototype from model
-         */
-        assingMod(dataSetItem, config = {}, strip = null, lock = null) {
-            var isInstance = dataSetItem instanceof PrmProto
-            if (!isEmpty(config)) {
-                return new PrmProto(this.debug).assign(dataSetItem, config, strip, lock)
-            } else {
-                if (strip) return new PrmProto(this.debug).assign(dataSetItem, null, strip)
-                else {
-                    if (isInstance) return dataSetItem
-                    else return new PrmProto(this.debug).assign(dataSetItem, null, null, lock)
-                }
-            }
-        }
-
-        /**
-         * @loopAssingMod
-         * loop thru each item in jobs array and assing prototypes
-         * `config` refer to assingMod
-         * return mods Arr / null
-         */
-        loopAssingMod(jobArr, config, lock) {
-            if (!isArray(jobArr)) return null
-            var total = jobArr.length
-
-            var modsArr = []
-            for (var i = 0; i < jobArr.length; i++) {
-                var d
-                var isInstance = jobArr[i] instanceof PrmProto
-                if (!isEmpty(config)) {
-                    d = this.assingMod(jobArr[i], config, null, lock)
-                } else {
-                    if (!isInstance) d = this.assingMod(jobArr[i], null, null, lock)
-                    else d = jobArr[i]
-                }
-                modsArr.push(d)
-            }
-            if (modsArr.length === total) return modsArr
-            else return null
-        }
-
-        /**
-         * @validJobDataSet
-         * test `PRM` data attributes is valid
-         * return true/false
-         */
-        validJobDataSet(data) {
-            if (isEmpty(data)) return false
-            if (isArray(data)) return false
-
-            var ignoreCompete = this.dataArchAttrs.length !== Object.keys(data).length
-            return this.dataArchAttrs.filter(z => {
-                if (z === 'complete' && ignoreCompete) return false// ignore this one
-                if (data[z] !== undefined) return true
-            }).filter(z => !!z).length === Object.keys(data).length
-        }
-
         timestamp() {
             return new Date().getTime()
         }
@@ -191,20 +128,6 @@ module.exports = (notify) => {
 
             if (isEmpty(uids)) return null
             else return uids
-        }
-
-        /**
-         * @valUID
-         * - validate uid make sure is good
-         */
-        valUID(uid, ignore = null) {
-            if (ignore) return this
-            if (!uid) throw ('must provide uid!')
-            if (!isString(uid)) throw ('uid must be a string')
-            if (uid.length < 2) throw ('uid must be longer then 1')
-            if (uid.split(' ').length > 1) throw ('uid cannot have any empty space!')
-            if (uid.indexOf(',') !== -1) throw ('uid cannot have commas!')
-            return true
         }
 
         // lastUid() {
@@ -472,6 +395,22 @@ module.exports = (notify) => {
                 if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
                 return this
             }
+
+            if (!isFunction(cb)) {
+                if (this.debug) notify.ulog(`[compute] pointless without callback, nothing changed`, true)
+                return this
+            }
+
+            // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
+            var refCondition = this.grab_ref[uid] || uid === false
+            if (!refCondition) {
+                if (this.debug) notify.ulog(`[compute] no refCondition met, nothing done`, true)
+                return this
+            }
+
+            var updateData
+            // grab original references
+            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
             this._itemDataSet = null
 
@@ -496,256 +435,239 @@ module.exports = (notify) => {
                 return itm
             }
 
-            if (typeof cb === 'function') {
-                // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
-                if (this.grab_ref[uid] || uid === false) {
-                    // grab original references
-                    var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
+            var loopEach = (skipINX) => {
+                var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
 
-                    var itemUpdated = (items, inx = null) => {
-                        // double check if required values were supplied
-                        if (typeof items === 'function') {
-                            if (this.debug) notify.ulog('returnin a pormise is not yet supported, nothing updated', true)
-                            return null
+                if (!isEmpty(this.itemDataSet) && isArray(this.itemDataSet)) {
+                    if (this.itemDataSet.length !== originalFormat.length) {
+                        if (this.debug) {
+                            notify.ulog({
+                                message: `[compute] itemDataSet should match job:uid ${uid} size, nothing changed` }, true)
                         }
-                        if (!items) {
-                            if (this.debug) notify.ulog({ message: no_uid_no_item.message }, true)
-                            return null
-                        }
+                        return []
+                    }
+                }
+                if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
-                        if (!isArray(items)) {
-                            if (items.message) {
-                                if (this.debug) notify.ulog({ message: items.message }, true)
-                                return null
-                            }
-                        }
+                return initialData.map((z, i) => {
+                    // means we are skipping callback for this index
+                    if (skipINX === i) return null
+                    // do for each callback
+                    var u = cb_sandbox(z, skipINX)
 
-                        var n = (items || []).map((z, i) => {
-                            if (typeof z === 'function') {
-                                if (this.debug) notify.ulog(`returnin a pormise is not yet supported, nothing updated for index ${i}`, true)
-                                return null
-                            }
+                    // in case you retur array instead of single item
+                    if (isArray(u)) u = head(u)
+                    // auto complete set on every compute iteration
+                    if (this.autoComplete) {
+                        u.complete = true
+                    }
+                    if (u) u = flatMap([u])
 
-                            var itm = {}
-                            if (inx !== null) i = inx // when for `each` index need to come from external loop
+                    if (u.length > 1 || !isArray(u)) {
+                        notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
+                        return null
+                    }
+                    var dd
 
-                            if (isObject(z) && !isArray(z)) {
-                                if (!z.dataSet) {
-                                    itm = setNewForTypeAll(z, originalFormat[i])
-                                    // if no dataSet lets remake last before update
-                                    //  if (this.debug) notify.ulog(`[compute] .dataSet must be set for all user values or it will return null`)
-                                } else {
-                                    itm['_ri'] = z._ri !== undefined ? z._ri : i
-                                    itm['_uid'] = z._uid || uid
-                                    itm['_timestamp'] = this.timestamp() // set new time
-                                    if (z.complete !== undefined) itm['complete'] = z.complete
-
-                                    itm['dataSet'] = z.dataSet || null
-                                    if (this.autoComplete) itm['complete'] = true
-                                }
-
-                                try {
-                                    if (Object.keys(z).length > 4) {
-                                        var ignored = Object.keys(z).filter(n => {
-                                            var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
-                                            //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
-                                            return except
-                                        })
-                                        if (ignored.length) {
-                                            if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
-                                        }
-                                        times(ignored.length, (i) => {
-                                            var del = ignored[i]
-                                            delete z[del]
-                                            delete itm[del]
-                                        })
-                                    }
-                                } catch (err) {
-                                    console.log('-- err in itemUpdated ', err)
-                                }
-                            } else {
-                                itm['_ri'] = originalFormat[i]['_ri']
-                                if (uid) itm['_uid'] = uid
-                                itm['_timestamp'] = this.timestamp()
-                                itm['dataSet'] = z || null
-                                if (this.autoComplete) itm['complete'] = true
-                            }
-
-                            /// validate `_ri` and `uid`
-
-                            var ri = itm['_ri']
-                            var _uid = uid === false ? itm['_uid'] : uid
-
-                            var valid_dataItem = _uid ? this.dataArch[_uid][ri] : false
-
-                            if (!valid_dataItem && uid === false) {
-                                if (this.debug) notify.ulog({ message: `[compute] we could not find any available uid for this index ${i}, changes omited` }, true)
-                                if (this.invalidType === 'hard') {
-                                    z.dataSet = null
-                                }
-                                return z
-                            }
-                            if (!valid_dataItem) {
-                                if (this.debug) notify.ulog({ message: `[compute] looks like _ri=${ri} for ${_uid} does not exist, changes omited` }, true)
-
-                                // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
-                                if (this.invalidType === 'hard') {
-                                    z.dataSet = null
-                                }
-                                return z
-                            }
-                            if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
-                                return itm
-                            } else {
-                                if (this.debug) notify.ulog({ message: `[compute] matching error, changes omited`, uid }, true)
-
-                                if (this.invalidType === 'hard') {
-                                    z.dataSet = null
-                                }
-                                // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
-                                return z
-                            }
-                        }).filter(n => n !== undefined)
-                        return n
+                    try {
+                        dd = itemUpdated(u, originalFormat[i]['_ri'])
+                    } catch (err) {
+                        console.log('-- itemUpdated err', err)
                     }
 
-                    var updateData
-                    if (method === 'all') {
-                        // NOTE call back should return new data as an array
-                        var updatedData = originalFormat || no_uid_no_item
-                        var updated = cb_sandbox(updatedData)
+                    return head(dd)
+                }).filter(z => z !== undefined)
+            }
 
-                        if (isArray(updateData)) {
-                            if (updateData.length !== this.resIndex[uid].length) {
-                                if (this.debug) notify.ulog('[compute], nothing updated, callback item does not match initial data size')
-                                return this
-                            }
-                        }
+            var itemUpdated = (items, inx = null) => {
+                // double check if required values were supplied
+                if (typeof items === 'function') {
+                    if (this.debug) notify.ulog('returnin a pormise is not yet supported, nothing updated', true)
+                    return null
+                }
+                if (!items) {
+                    if (this.debug) notify.ulog({ message: no_uid_no_item.message }, true)
+                    return null
+                }
 
-                        updateData = itemUpdated(updated)
+                if (!isArray(items)) {
+                    if (items.message) {
+                        if (this.debug) notify.ulog({ message: items.message }, true)
+                        return null
+                    }
+                }
 
-                        // NOTE when computing make sure provided data matches our `_ri` and `_uid`                   /// validate `_ri && _uid`
-                        var valid = this._validDataItem(updateData, uid)
-                        if (!valid && (valid || []).length !== originalFormat.length) {
-                            if (this.debug) notify.ulog({ message: 'compute all option did not match all dataSets correctly, either uid length or ri are wrong' }, true)
-                        }
-                    } // for all
-
-                    var loopEach = (skipINX) => {
-                        var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
-
-                        if (!isEmpty(this.itemDataSet) && isArray(this.itemDataSet)) {
-                            if (this.itemDataSet.length !== originalFormat.length) {
-                                if (this.debug) {
-                                    notify.ulog({
-                                        message: `[compute] itemDataSet should match job:uid ${uid} size, nothing changed` }, true)
-                                }
-                                return []
-                            }
-                        }
-                        if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
-
-                        return initialData.map((z, i) => {
-                            // means we are skipping callback for this index
-                            if (skipINX === i) return null
-                            // do for each callback
-                            var u = cb_sandbox(z, skipINX)
-
-                            // in case you retur array instead of single item
-                            if (isArray(u)) u = head(u)
-                            // auto complete set on every compute iteration
-                            if (this.autoComplete) {
-                                u.complete = true
-                            }
-                            if (u) u = flatMap([u])
-
-                            if (u.length > 1 || !isArray(u)) {
-                                notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
-                                return null
-                            }
-                            var dd
-
-                            try {
-                                dd = itemUpdated(u, originalFormat[i]['_ri'])
-                            } catch (err) {
-                                console.log('-- itemUpdated err', err)
-                            }
-
-                            return head(dd)
-                        }).filter(z => z !== undefined)
+                var n = (items || []).map((z, i) => {
+                    if (typeof z === 'function') {
+                        if (this.debug) notify.ulog(`returnin a pormise is not yet supported, nothing updated for index ${i}`, true)
+                        return null
                     }
 
-                    if (method === 'each' && uid !== false) {
-                        updateData = loopEach()
-                    } else if (method === 'each' && uid === false) {
-                        // NOTE
-                        /*
+                    var itm = {}
+                    if (inx !== null) i = inx // when for `each` index need to come from external loop
+
+                    if (isObject(z) && !isArray(z)) {
+                        if (!z.dataSet) {
+                            itm = setNewForTypeAll(z, originalFormat[i])
+                            // if no dataSet lets remake last before update
+                            //  if (this.debug) notify.ulog(`[compute] .dataSet must be set for all user values or it will return null`)
+                        } else {
+                            itm['_ri'] = z._ri !== undefined ? z._ri : i
+                            itm['_uid'] = z._uid || uid
+                            itm['_timestamp'] = this.timestamp() // set new time
+                            if (z.complete !== undefined) itm['complete'] = z.complete
+
+                            itm['dataSet'] = z.dataSet || null
+                            if (this.autoComplete) itm['complete'] = true
+                        }
+
+                        try {
+                            if (Object.keys(z).length > 4) {
+                                var ignored = Object.keys(z).filter(n => {
+                                    var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
+                                    //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
+                                    return except
+                                })
+                                if (ignored.length) {
+                                    if (this.debug) notify.ulog({ message: 'new values can only be set on dataSet', ignored }, true)
+                                }
+                                times(ignored.length, (i) => {
+                                    var del = ignored[i]
+                                    delete z[del]
+                                    delete itm[del]
+                                })
+                            }
+                        } catch (err) {
+                            console.log('-- err in itemUpdated ', err)
+                        }
+                    } else {
+                        itm['_ri'] = originalFormat[i]['_ri']
+                        if (uid) itm['_uid'] = uid
+                        itm['_timestamp'] = this.timestamp()
+                        itm['dataSet'] = z || null
+                        if (this.autoComplete) itm['complete'] = true
+                    }
+
+                    /// validate `_ri` and `uid`
+
+                    var ri = itm['_ri']
+                    var _uid = uid === false ? itm['_uid'] : uid
+
+                    var valid_dataItem = _uid ? this.dataArch[_uid][ri] : false
+
+                    if (!valid_dataItem && uid === false) {
+                        if (this.debug) notify.ulog({ message: `[compute] we could not find any available uid for this index ${i}, changes omited` }, true)
+                        if (this.invalidType === 'hard') {
+                            z.dataSet = null
+                        }
+                        return z
+                    }
+                    if (!valid_dataItem) {
+                        if (this.debug) notify.ulog({ message: `[compute] looks like _ri=${ri} for ${_uid} does not exist, changes omited` }, true)
+
+                        // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+                        if (this.invalidType === 'hard') {
+                            z.dataSet = null
+                        }
+                        return z
+                    }
+                    if (valid_dataItem._ri === itm['_ri'] && itm['_uid'] === valid_dataItem._uid) {
+                        return itm
+                    } else {
+                        if (this.debug) notify.ulog({ message: `[compute] matching error, changes omited`, uid }, true)
+
+                        if (this.invalidType === 'hard') {
+                            z.dataSet = null
+                        }
+                        // itm['dataSet'] = Object.assign({}, { error: 'wrong data provided for this set, does not match with length or _uid or _ri' }, { dataCopy: itm['dataSet'] })
+                        return z
+                    }
+                }).filter(n => n !== undefined)
+                return n
+            }
+
+            if (method === 'all') {
+                // NOTE call back should return new data as an array
+                var updatedData = originalFormat || no_uid_no_item
+                var updated = cb_sandbox(updatedData)
+
+                if (isArray(updateData)) {
+                    if (updateData.length !== this.resIndex[uid].length) {
+                        if (this.debug) notify.ulog('[compute], nothing updated, callback item does not match initial data size')
+                        return this
+                    }
+                }
+
+                updateData = itemUpdated(updated)
+
+                // NOTE when computing make sure provided data matches our `_ri` and `_uid`                   /// validate `_ri && _uid`
+                var valid = this._validDataItem(updateData, uid)
+                if (!valid && (valid || []).length !== originalFormat.length) {
+                    if (this.debug) notify.ulog({ message: 'compute all option did not match all dataSets correctly, either uid length or ri are wrong' }, true)
+                }
+            } // for all
+
+            if (method === 'each' && uid !== false) {
+                updateData = loopEach()
+            } else if (method === 'each' && uid === false) {
+                // NOTE
+                /*
                          when uid is not provided the only way to loop callback with `each` is to
                          findout what the total array is by initially updating with `itemDataSet`
                          will also throw silent error if try to update item index 0 in callback when  itemDataSet was not yet set
                         */
-                        var u = cb_sandbox() // required to get our itemDataSet
-                        if (u) u = flatMap([u])
+                var u = cb_sandbox() // required to get our itemDataSet
+                if (u) u = flatMap([u])
 
-                        // after first callback var should be updated
-                        if (this.itemDataSet) {
-                            var u2
+                // after first callback var should be updated
+                if (this.itemDataSet) {
+                    var u2
 
-                            if (u) u2 = loopEach(0)// skipping first
-                            else u2 = loopEach() // call again, posibly because we try update local dataSet that is non existant
+                    if (u) u2 = loopEach(0)// skipping first
+                    else u2 = loopEach() // call again, posibly because we try update local dataSet that is non existant
 
-                            updateData = [].concat(u, u2).filter(z => !!z) // add up 0 index from initial callback
-                        } else {
-                            notify.ulog(`uid was undefind for use of 'each' you must set itemDataSet=data[..] to update each callback to work`, true)
-                            return this
-                        }
+                    updateData = [].concat(u, u2).filter(z => !!z) // add up 0 index from initial callback
+                } else {
+                    notify.ulog(`uid was undefind for use of 'each' you must set itemDataSet=data[..] to update each callback to work`, true)
+                    return this
+                }
+            }
+
+            /**
+             * justify results from either `all` or `each`
+             * ########################################
+             * ################################
+             */
+            // if (uid) delete this.grab_ref[uid]
+            if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
+
+            if ((updateData || []).length) {
+                /// update only those which match ri to previously declared sets!
+                for (var i = 0; i < updateData.length; i++) {
+                    var updItem = updateData[i]
+                    if (isEmpty(updItem)) {
+                        if (this.debug) notify.ulog(`[compute] warning item to update is empty, skipping`)
+                        continue
                     }
 
-                    // if (uid) delete this.grab_ref[uid]
-                    if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
+                    var _uid = uid === false ? updItem._uid : uid
+                    if (!this.dataArch[_uid]) continue
 
-                    if ((updateData || []).length) {
-                        /// update only those which match ri to previously declared sets!
-                        for (var i = 0; i < updateData.length; i++) {
-                            var updItem = updateData[i]
-                            if (isEmpty(updItem)) {
-                                if (this.debug) notify.ulog(`[compute] warning item to update is empty, skipping`)
-                                continue
-                            }
-
-                            var _uid = uid === false ? updItem._uid : uid
-                            if (!this.dataArch[_uid]) continue
-
-                            var itmPosIndex = updItem._ri
-                            if (this.dataArch[_uid][itmPosIndex]) {
-                                if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
-                                    try {
-                                        this.dataArch[_uid][itmPosIndex] = updItem
-                                    } catch (err) {
-                                        if (this.debug) notify.ulog(err, true)
-                                    }
-                                }
+                    var itmPosIndex = updItem._ri
+                    if (this.dataArch[_uid][itmPosIndex]) {
+                        if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
+                            try {
+                                this.dataArch[_uid][itmPosIndex] = updItem
+                            } catch (err) {
+                                if (this.debug) notify.ulog(err, true)
                             }
                         }
-                        this.dataArch = Object.assign({}, this.dataArch)
                     }
                 }
-            } else {
-                if (this.debug) notify.ulog(`pointless without callback, nothing changed`)
+                this.dataArch = Object.assign({}, this.dataArch)
             }
 
             return this
-        }
-
-        availRef(uid) {
-            var a = this.dataArchSealed[uid] !== undefined
-            var b = this.dataArch[uid] !== undefined
-            var c = this.resIndex[uid] !== undefined
-            var valid = a && b && c
-            if (!valid) {
-                if (this.debug) notify.ulog(`seams that uid provided does not match any available data by reference`, true)
-            }
-            return valid
         }
 
         /**
@@ -872,33 +794,6 @@ module.exports = (notify) => {
                 setReady.push(o)
             }
             return setReady
-        }
-
-        /**
-         * @dataAssesment
-         * check to see if all of jobs dataSets are marked `complete`, when they are issue delete of job uppon resolution
-         * returns true/false/null
-         */
-        dataAssesment(uid, data) {
-            this.valUID(uid)
-            if (isEmpty(data)) return null
-            if (!isArray(data)) return null
-            if (!this.onlyComplete) return null
-
-            var archJobSetCount = (this.dataArch[uid] || []).length
-            var finalDataComplCount = 0
-
-            for (var i = 0; i < data.length; i++) {
-                var job = data[i]
-
-                if (!this.validJobDataSet(job)) {
-                    if (this.debug) notify.ulog(`[dataAssesment] dataSet is not valid for ${uid}`, true)
-                    continue
-                }
-                if (job.complete) finalDataComplCount++
-            }
-
-            return archJobSetCount === finalDataComplCount
         }
 
         /**
@@ -1538,7 +1433,9 @@ module.exports = (notify) => {
         }
     }
 
-    class PRMBeta extends PayloadResolutioManager {
+    const PRMHelpers = require('./prm.helpers')(notify, PayloadResolutioManager)
+
+    class PRMBeta extends PRMHelpers {
         constructor(debug, opts) {
             super(debug, opts)
         }
