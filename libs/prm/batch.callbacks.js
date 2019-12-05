@@ -5,7 +5,7 @@
 */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isString, uniq } = require('lodash')
+    const { isString, uniq, reduce, indexOf } = require('lodash')
     /**
      * assing callback properties to batchResolution
      */
@@ -14,6 +14,7 @@ module.exports = (notify) => {
             this.debug = debug
             this.batchCBList = {}
             this.batchCB_copy = null // keep cb copy
+            this.batchHistory = {} // {index:[],..} keep batch history so we dont call same batch again
         }
 
         // createCBListener(prop) {
@@ -50,28 +51,96 @@ module.exports = (notify) => {
         // }
 
         /**
+         * @testDoneBatch
+         * test if this batch was previously set, only if `batchUniq` option is available
+         */
+        testDoneBatch(uids, ref, failCB) {
+            if (!this.strictMode) return true // pass
+
+            // test if these uids already exist in past jobs
+            var found = []
+            for (var k in this.batchHistory) {
+                var bch = this.batchHistory[k]
+                if (!bch) continue
+                var exists = uids.filter(z => {
+                    return bch[z] !== undefined
+                })
+
+                if (exists.length) found = [].concat(found, exists).filter(z => !!z)
+            }
+
+            if (this.batchHistory[ref] && !found.length) {
+                notify.ulog({ message: `[testDoneBatch] batchHistory already set`, found })
+                return false // fails
+            }
+
+            if (!this.batchHistory[ref] && !found.length) {
+                this.batchHistory[ref] = uids.reduce((n, el, k) => {
+                    n[el] = false
+                    return n
+                }, {})
+
+                return true // pass
+            }
+
+            if (this.debug) {
+                notify.ulog({ message: `[testDoneBatch] found that you already tried to resolve using uids`, found })
+            }
+            if (typeof failCB === 'function') {
+                failCB(found)
+            }
+            return false // fail
+        }
+
+        /**
          * @batchCBDone
          * will check when each batch callback was made if both set
          * make final callback
          */
         batchCBDone(uids, cb) {
-            var delOld = () => {
-                for (var i = 0; i < uids.length; i++) {
-                    if (this.batchCBList[uids[i]] !== undefined) {
-                        delete this.batchCBList[uids[i]]
+            var delOld = (_uids) => {
+                for (var i = 0; i < (_uids || []).length; i++) {
+                    if (this.batchCBList[_uids[i]] !== undefined) {
+                        delete this.batchCBList[_uids[i]]
                         // console.log('deleted done callback', uids[i])
                     }
                 }
             }
+
+            var markBachHistory = (uids) => {
+                if (this.strictMode) {
+                    // set batch history to test concurent calls
+                    if (this.batchHistory[ref]) {
+                        this.batchHistory[ref] = reduce(this.batchHistory[ref], (n, el, k) => {
+                            if (indexOf(uids, k) !== -1) n[k] = true
+                            return n
+                        }, {})
+                    }
+                }
+            }
+
+            var ref = new Date().getTime()
+            var pass = this.testDoneBatch(uids, ref, failed => {
+                //  delOld(failed)
+                // if (this.debug) notify.ulog('failed batchCBList  deleted')
+            })
+
+            if (!pass) {
+                cb(false)
+                return
+            }
             var callsMade = []
+
             for (var i = 0; i < uids.length; i++) {
                 this.batchCB(uids[i], (uid) => {
                     callsMade.push(uid)
                     callsMade = uniq(callsMade)
+
                     if (callsMade.length >= uids.length) {
-                        cb()
+                        markBachHistory(callsMade)
+                        cb(true)
                         // unsubscribe delete all callbacks
-                        delOld()
+                        delOld(uids)
                     }
                 })
             }

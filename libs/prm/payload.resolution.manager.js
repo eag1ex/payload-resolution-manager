@@ -21,7 +21,7 @@ module.exports = (notify) => {
             // if `hard` is set any invalid dataSet will be unset
             // if `soft` is set original dataSet will be kept
             this.invalidType = opts.invalid || 'soft' // `soft` or `hard`
-
+            this.strictMode = opts.strictMode || null // makes sure that same jobs cannot be called again
             this.batch = opts.batch || null
             this.resSelf = opts.resSelf || null // if true resolution will return self instead of value
             this.onlyComplete = opts.onlyComplete || null // when set resolution will only resolve items that are marked as complete
@@ -30,6 +30,7 @@ module.exports = (notify) => {
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
             }
+            this.jobUID_history = {}// keep history of all jobs if `strictMode` is set
             this.debug = debug
             this._dataArch = {
                 // NOTE
@@ -84,6 +85,7 @@ module.exports = (notify) => {
         //     if (this._ofUID && !uid) uid = this._ofUID
         //     if (uid !== false) this.valUID(uid)
         // }
+
         /**
          * @set
          * `uid` must specify uid which will identify this dataSet
@@ -97,6 +99,9 @@ module.exports = (notify) => {
 
             if (this.dataArchSealed[uid]) {
                 if (this.debug) notify.ulog('[set] data already sealed cannot update', true)
+                return this
+            }
+            if (this.strictJob(uid) === true) {
                 return this
             }
 
@@ -120,6 +125,10 @@ module.exports = (notify) => {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
             this.valUID(uid)
+
+            if (this.strictJob(uid) === true) {
+                return this
+            }
 
             var isNum = (d) => {
                 return typeof d === 'number'
@@ -180,6 +189,10 @@ module.exports = (notify) => {
         updateSet(newData, uid) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
+
+            if (this.strictJob(uid) === true) {
+                return this
+            }
 
             this.valUID(uid)
 
@@ -338,6 +351,10 @@ module.exports = (notify) => {
             if (uid !== false) this.valUID(uid)
 
             if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
+
+            if (this.strictJob(uid) === true) {
+                return this
+            }
 
             if (this.dataArchSealed[uid] && uid !== false) {
                 if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
@@ -753,8 +770,9 @@ module.exports = (notify) => {
          * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
          */
         batchRes(jobUIDS = [], type = 'flat', doneCB = null) {
-            if (!isArray(jobUIDS)) return null
             if (!this.batch) return null
+            if (!isArray(jobUIDS)) return null
+            if (!jobUIDS.length) return null
 
             if (!type) type = 'flat' // set default
 
@@ -805,7 +823,8 @@ module.exports = (notify) => {
 
             //
             if (typeof doneCB === 'function') {
-                this.batchCBDone(jobUIDS, () => {
+                this.batchCBDone(jobUIDS, (pass) => {
+                    if (!pass) return
                     var r = performResolution()
                     if (r === null) return
                     doneCB(r)
@@ -833,6 +852,11 @@ module.exports = (notify) => {
             // will validate all payload items against `resIndex`
 
             if (this.resSelf) this.d = null
+
+            if (this.strictJob(uid) === true) {
+                if (this.resSelf) return this
+                else return []
+            }
 
             var returnAS = (output) => {
                 if (this.resSelf) {
@@ -972,6 +996,10 @@ module.exports = (notify) => {
 
                 // all good
                 this.reset(uid)
+                /// in `strictMode` add last completed job to history so it is not allowed to call same uid again
+                if (this.strictMode === true) {
+                    if (this.jobUID_history[uid] === false) this.jobUID_history[uid] = true
+                }
                 return returnAS(output)
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)

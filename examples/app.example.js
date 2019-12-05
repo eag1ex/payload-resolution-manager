@@ -8,6 +8,7 @@ const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
 const options = {
+    strictMode: true, // make sure jobs of the same uid cannot be called again!
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
     batch: true, // after running `resolution` method, each job that is batched using `batchRes([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution

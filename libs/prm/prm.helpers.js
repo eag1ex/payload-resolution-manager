@@ -84,6 +84,23 @@ module.exports = (notify, PayloadResolutioManager) => {
         }
 
         /**
+         * @strictJob
+         * make sure that we do not repeat same jobs if set to `strictMode`
+         */
+        strictJob(uid) {
+            // track job history in strict mode
+            if (this.strictMode) {
+                if (this.jobUID_history[uid] === true) {
+                    if (this.debug) notify.ulog(`[set] since we are in strictMode, this job was already completed once before!, job ignored!`, true)
+                    return true
+                }
+                if (this.jobUID_history[uid] === undefined) this.jobUID_history[uid] = false
+                return false
+            }
+            return false
+        }
+
+        /**
          * @dataAssesment
          * check to see if all of jobs dataSets are marked `complete`, when they are issue delete of job uppon resolution
          * returns true/false/null
