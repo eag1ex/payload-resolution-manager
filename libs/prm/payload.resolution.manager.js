@@ -9,60 +9,8 @@ module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isString, uniq, cloneDeep, isFunction, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
-    // const prmMod = new PrmProto()
-    // var item = { dataSet: { name: 'alex', age: 50 }, _ri: 0, _uid: 'job1', _timestamp: new Date().getTime() }
-    // var m = prmMod.assign(item)
-
     const BatchCallbacks = require('./batch.callbacks')(notify)
-
-    class PRMTOOLS extends BatchCallbacks {
-        constructor(debug, opts) {
-            super(debug, opts)
-            this.debug = debug
-            // PRMTOOLS
-            this._fromRI = null
-        }
-
-        /**
-         * @of
-         * in case you are jugling between compute and do not want to change uid position
-         * will reset next query to return that job only once.
-         * `UID` if not set nothing will be changed
-         */
-        of(UID) {
-            if (UID) this.valUID(UID)
-            else return this
-            if (!this.dataArch[UID]) {
-                if (this.debug) notify.ulog(`[of] UID invalid, not found`, true)
-                return this
-            }
-            this._lastUID = UID
-            return this
-        }
-
-        /**
-         * @from
-         *  in case you are jugling between compute
-         * will reset next query to return last job from specified `_ri` position only once
-         * `RI` if not set nothing will be chenged
-         */
-        from(RI) {
-            if (RI === undefined) return this
-            var _ri = Number(RI)
-            if (!isNumber(_ri)) {
-                if (this.debug) notify.ulog(`[from] RI must be a number, without decilams`, true)
-                return this
-            }
-
-            if (!this._lastUID) {
-                if (this.debug) notify.ulog(`[from] last uid not found, not sure where to start RI index`, true)
-                return this
-            }
-
-            this._fromRI = _ri
-            return this
-        }
-    }
+    const PRMTOOLS = require('./prm.tools')(notify, BatchCallbacks)
 
     class PayloadResolutioManager extends PRMTOOLS {
         constructor(debug, opts = {}) {
@@ -1100,16 +1048,26 @@ module.exports = (notify) => {
         dataArchWhich() {
             const fromOK = this._fromRI !== undefined && this._fromRI !== null
             const ofOK = this._lastUID !== undefined && this._lastUID !== null
+            const filterOK = this._lastFilteredArchData !== undefined && this._lastFilteredArchData !== null
 
-            if (!fromOK) {
+            if (!fromOK && !filterOK) {
                 return this.dataArch[this._lastUID]
             }
 
             var dataArch_copy = cloneDeep(this.dataArch)
+
             if (ofOK) {
                 dataArch_copy = dataArch_copy[this._lastUID] // takes priority
             }
-            if (fromOK && ofOK) {
+
+            if (this._lastFilteredArchData) {
+                var d = this._lastFilteredArchData
+                this._lastFilteredArchData = null
+                // console.log('this._lastFilteredArchData dataReduced', fromOK, dataReduced)
+                dataArch_copy = d
+            }
+
+            if (fromOK && ofOK && !filterOK) {
                 var dataReduced = []
                 for (var i = 0; i < dataArch_copy.length; i++) {
                     var job = dataArch_copy[i]

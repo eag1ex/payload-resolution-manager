@@ -155,3 +155,7 @@ module.exports = (notify) => {
 
     return PrmProto
 }
+
+// const prmMod = new PrmProto()
+// var item = { dataSet: { name: 'alex', age: 50 }, _ri: 0, _uid: 'job1', _timestamp: new Date().getTime() }
+// var m = prmMod.assign(item)

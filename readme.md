@@ -154,6 +154,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 * `compute(callback(), method='all',uid)`: use this method to perform data calculation for each `job:uid`.
      - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` will loop thru each item sequently,  must return 1 item. If you do not know your uid and want to use `each`, you must set `this.itemDataSet` to update callback, for clear explanation, take a look at examples in `./examples/index.js`
      - `uid`: provide for data if not chaining, or switching to another job. When `uid`=null it will look for last used. If anonymous, because your data was async, must provide `formated()` > with {dataSet[],_uid,_ri} so it can search thru and match available. 
+     - `tools`: compute works best with these tools: `of, from, filter, tap`, so you can make changes only to those dataSets without altering rest of job data.
 * `getSet(uid,self:boolean)`:  return data for desired `uid` in formated state.
      - `self:true`: you can chain this method. Then you must provide: getSet(...).d  to return it.
 
