@@ -52,6 +52,7 @@ module.exports = (notify) => {
                 // uid > this.d
             }
             this.dataArchSealed = {}
+            this.lastAsync = {} /// last async holds promise for each job that was passed as a promise, once  promise is resolved data is accesable, `lastAsync` is just a boolean, an indicator when data is ready, user needs to know if returning a promise, should pass in a callback, or resolve data first from `resolution.then(()=>...)`
         }
 
         /**
@@ -419,34 +420,93 @@ module.exports = (notify) => {
                 }
                 if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
-                return initialData.map((z, i) => {
-                    // means we are skipping callback for this index
-                    if (skipINX === i) return null
-                    // do for each callback
-                    var u = cb_sandbox(z, skipINX)
+                var loopd = []
+                var loop = (i) => {
+                    if (initialData[i]) {
+                        var z = initialData[i]
+                        // means we are skipping callback for this index
+                        if (skipINX === i) return null
 
-                    // in case you retur array instead of single item
-                    if (isArray(u)) u = head(u)
-                    // auto complete set on every compute iteration
-                    if (this.autoComplete) {
-                        u.complete = true
+                        var perLoop = (_u) => {
+                            // in case you retur array instead of single item
+                            if (isArray(_u)) _u = head(_u)
+                            // auto complete set on every compute iteration
+                            if (this.autoComplete) {
+                                _u.complete = true
+                            }
+                            if (_u) _u = flatMap([_u])
+
+                            if (_u.length > 1 || !isArray(_u)) {
+                                notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
+
+                                // return null
+                                loopd.push(null)
+                                i = i + 1
+                                loop(i)
+                                return
+                            }
+                            var dd
+
+                            try {
+                                dd = itemUpdated(_u, originalFormat[i]['_ri'])
+                            } catch (err) {
+                                console.log('-- itemUpdated err', err)
+                            }
+
+                            loopd.push(head(dd))
+
+                            i = i + 1
+                            loop(i)
+                        }
+
+                        // do for each callback
+                        var u = cb_sandbox(z, skipINX)
+                        /**
+                         * check if each compute callback is a promise
+                         */
+                        if (this.isPromise(u) === true) {
+                            // this.lastAsync[uid] =
+                            u.then((uu) => {
+                                perLoop(uu)
+                            })
+                        } else {
+                            perLoop(u)
+                        }
                     }
-                    if (u) u = flatMap([u])
+                    // else terminate
+                }
+                loop(0)
 
-                    if (u.length > 1 || !isArray(u)) {
-                        notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
-                        return null
-                    }
-                    var dd
+                loopd = loopd.filter(z => z !== undefined)
+                return loopd
+                // return initialData.map((z, i) => {
+                //     // means we are skipping callback for this index
+                //     if (skipINX === i) return null
+                //     // do for each callback
+                //     var u = cb_sandbox(z, skipINX)
 
-                    try {
-                        dd = itemUpdated(u, originalFormat[i]['_ri'])
-                    } catch (err) {
-                        console.log('-- itemUpdated err', err)
-                    }
+                //     // in case you retur array instead of single item
+                //     if (isArray(u)) u = head(u)
+                //     // auto complete set on every compute iteration
+                //     if (this.autoComplete) {
+                //         u.complete = true
+                //     }
+                //     if (u) u = flatMap([u])
 
-                    return head(dd)
-                }).filter(z => z !== undefined)
+                //     if (u.length > 1 || !isArray(u)) {
+                //         notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
+                //         return null
+                //     }
+                //     var dd
+
+                //     try {
+                //         dd = itemUpdated(u, originalFormat[i]['_ri'])
+                //     } catch (err) {
+                //         console.log('-- itemUpdated err', err)
+                //     }
+
+                //     return head(dd)
+                // }).filter(z => z !== undefined)
             }
 
             var itemUpdated = (items, inx = null) => {

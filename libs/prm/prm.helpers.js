@@ -30,6 +30,41 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
         }
 
+        isPromise(d) {
+            if (isEmpty(d)) return false
+            if ((d || {}).then !== undefined) return true
+            if (typeof d === 'function') return true
+
+            return false
+        }
+
+        asPromise(uid, cb = null) {
+            if (this.lastAsync[uid] !== undefined) {
+                if (this.lastAsync[uid].then !== undefined) {
+                    if (typeof cb === 'function') {
+                        this.lastAsync[uid].then(() => {
+                            cb()
+                            delete this.lastAsync[uid]
+                        })
+                        return true
+                    }
+                    return this.lastAsync[uid]
+                }
+
+                if (typeof this.lastAsync[uid] === 'function') {
+                    if (typeof cb === 'function') {
+                        this.lastAsync[uid].then(() => {
+                            cb()
+                            delete this.lastAsync[uid]
+                        })
+                        return true
+                    }
+                    return this.lastAsync[uid]
+                }
+            }
+            return false
+        }
+
         /**
          * @loopAssingMod
          * loop thru each item in jobs array and assing prototypes
