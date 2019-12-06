@@ -20,7 +20,7 @@
   * var xp = new XPromise(uid)
   * xp.p('123')
   * setTimeout(() => {
-      xp.p().resolve()
+      xp.p().resolve(uid,{data})
   }, 2000);
      xp.p().then(()=>)
   */
@@ -41,20 +41,54 @@ module.exports = (notify) => {
             this._xpromise = {}
             this._ps = {}
             this.lastUID = null
+            this.rejects = []
         }
 
         test() {
             var uid1 = '1233535'
+            var uid2 = '234436'
             this.p(uid1)
 
             setTimeout(() => {
-                this.xp.resolve()
+                this.xp.resolve(uid1, 'abc')
             }, 2000)
 
-            this.xp.then(v => {
-                console.log('done!', v)
-            }, err => {
+            this.ref(uid2).then(z => {}, err => {
+                console.log('err', err)
             })
+            // this.xp.then(v => {
+            //     console.log('done1!', v)
+            // }, err => {
+            // })
+
+            // this.sync(uid1).then(z => {
+            //     console.log('done', z)
+            // })
+            // // console.log(this.xp.sync.then)
+
+            // this.p(uid2)
+            // setTimeout(() => {
+            //     this.xp.reject(uid2, 'defg')
+            // }, 2200)
+
+            // this.sync(uid2).then(z => {
+            //     console.log('done', z)
+            // }, err => {
+            //     console.log('err done 2', err)
+            // })
+
+            // this.p(uid2).then(v => {
+            //     console.log('done 2!', v)
+            // }, err => {
+            //     console.log('err 2!', err)
+            // })
+
+            // console.log('pending', this.p().pending())
+            // Promise.all(this.xp.all()).then(d => {
+            //     console.log('all', d)
+            // }, err => {
+            //     console.log('err', err)
+            // })
         }
 
         /**
@@ -62,6 +96,13 @@ module.exports = (notify) => {
          * auto set new promise, if doesnt already exist
          * `uid` provide uniq id for each promise
          */
+        ref(uid) {
+            if (uid) {
+                this.lastUID = uid
+                this.testUID(uid)
+            }
+            return this
+        }
         p(uid) {
             if (uid) this.lastUID = uid
             if (!uid && this.lastUID) uid = this.lastUID
@@ -74,6 +115,14 @@ module.exports = (notify) => {
 
             }
             return this
+        }
+
+        /**
+         * @pending
+         * return remaining promises
+         */
+        pending() {
+            return Object.keys(this.ps).length
         }
 
         /**
@@ -109,10 +158,11 @@ module.exports = (notify) => {
         }
 
         /**
-         * @resolve
-         * * `value` when provided data will be resolved in the end
+         * @reject
+         * * `data` when provided data will be resolved in the end
+         * * `uid` declare uid if calling many promises
          */
-        reject(uid, value = null) {
+        reject(uid, data = null) {
             if (uid) this.lastUID = uid
             if (!uid && this.lastUID) uid = this.lastUID
             this.testUID(uid)
@@ -132,21 +182,18 @@ module.exports = (notify) => {
                 return this
             }
 
-            // if (value !== null) {
-            //     this.ps[uid].v = value
-            // } else {
-
-            // }
             this.ps[uid].v = false
+            if (data !== null) this.ps[uid].data = data
             this.ps = Object.assign({}, this.ps)
             return this
         }
 
         /**
          * @resolve
-         * * `value` when provided data will be resolved in the end
+         * * `data` when provided data will be resolved in the end
+         * * `uid` declare uid if calling many promises
          */
-        resolve(uid, value = null) {
+        resolve(uid, data = null) {
             if (uid) this.lastUID = uid
             if (!uid && this.lastUID) uid = this.lastUID
             this.testUID(uid)
@@ -166,25 +213,49 @@ module.exports = (notify) => {
                 return this
             }
 
-            // if (value !== null) {
-            //     this.ps[uid].v = value
-            // } else {
-
-            // }
             this.ps[uid].v = true
+            if (data !== null) this.ps[uid].data = data
             this.ps = Object.assign({}, this.ps)
             return this
         }
 
+        /**
+         * @sync
+         * sinc then cannot be used to copy behaviour, use `sync` as promise or await
+         */
+        sync(uid) {
+            if (uid) this.lastUID = uid
+            if (!uid && this.lastUID) uid = this.lastUID
+            this.testUID(uid)
+            return this.ps[uid].p.then(z => {
+                this.delete(uid)
+                return Promise.resolve(z)
+            }, err => {
+                this.delete(uid)
+                return Promise.reject(err)
+            })
+            // .catch(err => {
+            //     if (this.debug) notify.ulog({ message: `unhandled rejection`, err })
+            // })
+        }
+
         then(cb, errCB) {
             var uid = this.lastUID
-            this.testUID(uid)
+            try {
+                this.testUID(uid)
+            } catch (err) {
+                notify.ulog(err, true)
+            }
 
             if (!this.validPromise(this.ps[uid])) {
                 if (this.debug) notify.ulog(`[then] promise uid: ${uid} is invalid`, true)
-                return new Promise((resolve, reject) => {
-                    reject(`[then] promise uid: ${uid} is invalid`)
-                })
+                var errMessage = `[then] promise uid: ${uid} is invalid`
+                // var r = new Promise((resolve, reject) => {
+                //     reject(errMessage)
+                // })
+                // this.rejects.push(r)
+                if (typeof errCB === 'function') errCB(errMessage)
+                return this
             }
 
             this.ps[uid].p.then((v) => {
@@ -195,6 +266,24 @@ module.exports = (notify) => {
                 if (typeof errCB === 'function') errCB(err)
             })
             return this
+        }
+
+        /**
+         * @all
+         * return all promises in an array, can be used with Promise.all([...])
+         */
+        all() {
+            var promises = []
+            for (var k in this.ps) {
+                if (!this.ps.hasOwnProperty(k)) continue
+                var proms = (this.ps[k] || {}).p
+                if (!proms) continue
+                promises.push(proms)
+            }
+
+            promises = [].concat(this.rejects, promises).filter(z => !!z)
+            this.rejects = []// unset
+            return promises
         }
 
         /**
@@ -217,8 +306,9 @@ module.exports = (notify) => {
                             self[`_xpromise`][_prop] = val
                             if (self.promiseCBList[_prop]) {
                                 var newVal = (val || {}).v
+                                var data = (val || {}).data || null
                                 if (newVal === true || newVal === false) {
-                                    self.promiseCBList[_prop](_prop, newVal)
+                                    self.promiseCBList[_prop](_prop, newVal, data)
                                 }
                             }
                             // notify.ulog({ message: 'new value set', prop: _prop, value: val })
@@ -233,6 +323,9 @@ module.exports = (notify) => {
             return this.xpromise // Object.assign(XPromise.prototype, this.xp)
         }
 
+        get ps() {
+            return this._ps
+        }
         /**
          * @ps
          * create promise object, listen for callbacks from `xPromiseListener` to resolve the promise
@@ -246,14 +339,15 @@ module.exports = (notify) => {
             var setPromise = (id) => {
                 return new Promise((resolve, reject) => {
                     if (!this.promiseCBList[id]) {
-                        this.promiseCBList[id] = (name, value) => {
+                        this.promiseCBList[id] = (name, value, data) => {
+                            var d = data !== null ? data : value
                             if (value === true) {
                                 delete this.promiseCBList[id]
-                                return resolve(true)
+                                return resolve(d)
                             }
                             if (value === false) {
                                 delete this.promiseCBList[id]
-                                return reject(false)
+                                return reject(d)
                             }
                         }
                         return
@@ -270,7 +364,11 @@ module.exports = (notify) => {
                 if (this.validPromise(v[k])) {
                     // resolve or reject
                     if (v[k].v === true || v[k].v === false) {
-                        this.xpromise[k] = Object.assign({}, v[k])
+                        if (v[k].data !== null) {
+                            this.xpromise[k] = Object.assign({}, { v: v[k].v, data: v[k].data }, v[k])
+                        } else {
+                            this.xpromise[k] = Object.assign({}, { v: v[k].v }, v[k])
+                        }
                     }
                     continue
                 } else {
@@ -287,7 +385,8 @@ module.exports = (notify) => {
                             listener[k] = 'set'
                             v[k] = {
                                 p: p,
-                                v: listener[k]
+                                v: listener[k],
+                                data: null
                             }
                         } else {
                             if (this.debug) notify.ulog(`[p] to set initial promise you need to provide string value 'set'`, true)
@@ -317,6 +416,7 @@ module.exports = (notify) => {
             delete this.xpromise[uid]
             delete this._xpromise[uid]
             delete this._ps[uid]
+
             this.lastUID = null
             return this
         }
@@ -329,9 +429,6 @@ module.exports = (notify) => {
             return ((v || {}).p !== undefined && (v || {}).v !== undefined)
         }
 
-        get ps() {
-            return this._ps
-        }
         testUID(UID) {
             if (!UID) throw ('UID NOT PROVIDED')
             if (!isString(UID)) throw ('PROVIDED UID MUST BE STRING')
