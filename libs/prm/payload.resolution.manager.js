@@ -355,6 +355,11 @@ module.exports = (notify) => {
             if (this.strictJob(uid) === true) {
                 return this
             }
+            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
+
+            if (isEmpty(originalFormat)) {
+                return this
+            }
 
             if (this.dataArchSealed[uid] && uid !== false) {
                 if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
@@ -375,7 +380,7 @@ module.exports = (notify) => {
 
             var updateData
             // grab original references
-            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
+
             var no_uid_no_item = { message: 'uid not provided so cannot loop thru original set' }
             this._itemDataSet = null
 
@@ -1088,11 +1093,20 @@ module.exports = (notify) => {
                 dataArch_copy = dataArch_copy[this._lastUID] // takes priority
             }
 
-            if (this._lastFilteredArchData) {
-                var d = this._lastFilteredArchData
+            // `filter(()=>)`
+            if (this._lastFilteredArchData && ofOK) {
+                if (isEmpty(dataArch_copy)) return []
+
+                // NOTE we do not use this filtered data, we only need it for reference so we can match it with original asset
+
+                // grab all `_ri` references
+                var ri_refs = this._lastFilteredArchData.map(z => z._ri)
                 this._lastFilteredArchData = null
-                // console.log('this._lastFilteredArchData dataReduced', fromOK, dataReduced)
-                dataArch_copy = d
+                if (!ri_refs.length) return []
+
+                dataArch_copy = dataArch_copy.filter(z => {
+                    return indexOf(ri_refs, z._ri) !== -1
+                })
             }
 
             if (fromOK && ofOK && !filterOK) {

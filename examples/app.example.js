@@ -49,12 +49,12 @@ var d = prm.set(d1, job50)
     }, 'all')
 
     .of(job50) // of what job
-    .from(1) // from what `_ri` index
+    .from(0) // from what `_ri` index
     .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
-        if (v.dataSet.age > 30) return true
+        if (v.dataSet.age < 30) return true
     })
     .compute(item => {
-        // make more changes to job_50, starting from `_ri` index 5
+        // make more changes to job_50, starting from `_ri` index
         return item
     }, 'each')
 // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it

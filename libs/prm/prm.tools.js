@@ -66,17 +66,16 @@ module.exports = (notify, BatchCallbacks) => {
             this._lastFilteredArchData = data.filter((val, index) => {
                 if (this._fromRI !== undefined) {
                     // if from was set filter only matching
-                    if (val._ri >= this._fromRI) return true
+                    if (!(val._ri >= this._fromRI)) return false
                 }
-                var val
+                var v
                 try {
-                    val = cb(val, index)
+                    v = cb(val, index)
                 } catch (err) {
                     notify.ulog(err, true)
-                    val = false
+                    v = false
                 }
-
-                return val || false
+                return v || false
             })
             return this
         }
@@ -89,6 +88,7 @@ module.exports = (notify, BatchCallbacks) => {
             if (!this._lastUID) return this
             if (!isFunction(cb)) return this
             var data = cloneDeep(this.dataArch)[this._lastUID]
+            if (isEmpty(data)) return this
             data.map((z, i) => {
                 try {
                     cb(z, i)
