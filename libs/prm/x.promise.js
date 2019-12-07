@@ -23,10 +23,21 @@
 /**
  * @XPromise
  * cleaver promise, similar to Q/defer, uses proto getter/setter with dynamic callback to send resolve state
+ *
+ * `p(uid)`: Set new promise with its uniq ref/id
+ * `xp` : a variable sorthand of `p()`, can use if if last uid already set
+ * `set(uid)` : Reset previously set promise again
+ * `resolve(uid)`: will set as ready to be resolved with `onReady` or `fin().then(..)`
+ * `reject(uid)`: same as resolve but will return as rejected value
+ * `ref(uid)` : will set uid/ref so dont have to repeat typing your uid
+ * `onReady(done=>,err=>)` will return ready data in callback
+ * `fin(uid)`: will return as promise: fin().then(d=>...)
+ * `all`: a variable will return all current promises, so you can assign it to Promise.all(all)...
+ * `pending`: a variable return index of currently active promises
  */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isArray, isObject, isString, isNumber } = require('lodash')
+    const { isEmpty, isArray, isObject, isString, isNumber, times } = require('lodash')
     class XPromise {
         constructor(promiseUID, debug) {
             // if set initiate promise right away
@@ -45,22 +56,28 @@ module.exports = (notify) => {
 
         test() {
             var uid1 = '1233535'
-            var uid2 = '234436'
+            var uid1a = '1233535--1'
+            var uid1b = '1233535--2'
             this.p(uid1)
-
+            this.p(uid1a)
+            this.p(uid1b)
             setTimeout(() => {
-                this.xp.resolve(uid2, 'abc')
+                this.resolve(uid1, 'abc')
+                this.resolve(uid1a, 'abc')
+                this.resolve(uid1b, 'abc')
             }, 2000)
 
-            this.ref(uid1).onReady(z => {
-                console.log('onReady', z)
-            }, err => {
-                console.log('err', err)
+            // this.ref(uid1).onReady(z => {
+            //     console.log('onReady', z)
+            // }, err => {
+            //     console.log('err', err)
+            // })
+            this.ref(uid1).fin().then(d => {
+                console.log('fin', d)
             })
-            // this.ref(uid2).fin().then()
 
             // console.log('pending', this.p().pending())
-            // Promise.all(this.xp.all()).then(d => {
+            // Promise.all(this.all()).then(d => {
             //     console.log('all', d)
             // }, err => {
             //     console.log('err', err)
@@ -106,7 +123,7 @@ module.exports = (notify) => {
          * @pending
          * return remaining promises
          */
-        pending() {
+        get pending() {
             return Object.keys(this.ps).length
         }
 
@@ -128,6 +145,7 @@ module.exports = (notify) => {
         /**
          * @set
          * set new promise
+         * `uid`
          */
         set(uid) {
             uid = this._getLastRef(uid)
@@ -143,7 +161,7 @@ module.exports = (notify) => {
         /**
          * @reject
          * `uid` declare uid if calling many promises
-         * `data` when provided data will be resolved in the end
+         * `data` provided data will be resolved in the end
          */
         reject(uid, data = null) {
             uid = this._getLastRef(uid)
@@ -172,7 +190,7 @@ module.exports = (notify) => {
         /**
          * @resolve
          * `uid` declare uid if calling many promises
-         * `data` when provided data will be resolved in the end
+         * `data` provided data will be resolved in the end
          */
         resolve(uid, data = null) {
             uid = this._getLastRef(uid)
@@ -204,14 +222,17 @@ module.exports = (notify) => {
          */
         fin(uid) {
             uid = this._getLastRef(uid)
-
-            return this.ps[uid].p.then(z => {
-                this.delete(uid)
-                return Promise.resolve(z)
-            }, err => {
-                this.delete(uid)
-                return Promise.reject(err)
-            })
+            var rel = this._resolveAllRelativeAS(uid)
+            if (rel) return rel
+            else {
+                return this.ps[uid].p.then(z => {
+                    this.delete(uid)
+                    return Promise.resolve(z)
+                }, err => {
+                    this.delete(uid)
+                    return Promise.reject(err)
+                })
+            }
             // .catch(err => {
             //     if (this.debug) notify.ulog({ message: `unhandled rejection`, err })
             // })
@@ -234,21 +255,25 @@ module.exports = (notify) => {
                 return this
             }
 
-            this.ps[uid].p.then((v) => {
-                this.delete(uid)
-                if (typeof cb === 'function') cb(v)
-            }, err => {
-                this.delete(uid)
-                if (typeof errCB === 'function') errCB(err)
-            })
-            return this
+            var rel = this._resolveAllRelativeAS(uid, cb, errCB)
+            if (rel) return this
+            else {
+                this.ps[uid].p.then((v) => {
+                    this.delete(uid)
+                    if (typeof cb === 'function') cb(v)
+                }, err => {
+                    this.delete(uid)
+                    if (typeof errCB === 'function') errCB(err)
+                })
+                return this
+            }
         }
 
         /**
          * @all
          * return all promises in an array, can be used with Promise.all([...])
          */
-        all() {
+        get all() {
             var promises = []
             for (var k in this.ps) {
                 if (!this.ps.hasOwnProperty(k)) continue
@@ -259,7 +284,59 @@ module.exports = (notify) => {
 
             promises = [].concat(this.rejects, promises).filter(z => !!z)
             this.rejects = []// unset
+            this.lastUID = null
             return promises
+        }
+
+        _resolveAllRelativeAS(uid, cb = null, cbERR = null) {
+            var rel = this._findRelativePromise(uid)
+            if (rel) {
+                var { relative, refs } = rel
+                return Promise.all(relative).then((d) => {
+                    times(refs.length, i => {
+                        this.delete(refs[i])
+                    })
+                    if (typeof cb === 'function') cb(d)
+                    else return Promise.resolve(d)
+                }, err => {
+                    if (typeof cbERR === 'function') cbERR(err)
+                    else return Promise.reject(err)
+                })
+            } else {
+                return null
+            }
+        }
+
+        /**
+         * @_findRelativePromise
+         * relative promise ends with sufix `--{index}`, means it belongs to one ref/uid and we need to only make one ready/all/fin call to compelte it
+         */
+        _findRelativePromise(relUID) {
+            // find relative uid/refs
+            var uid = relUID.split('--')[0]
+            this.testUID(uid)
+
+            var relative = []
+            var refs = []
+            for (var k in this.ps) {
+                if (k.indexOf(uid) !== -1 && k.indexOf(`--`) !== -1) {
+                    if (this.validPromise(this.ps[k])) {
+                        relative.push(this.ps[k].p)
+                        refs.push(k)
+                    }
+                }
+            }
+
+            // also collect refs so we can dispose of all data by ref/uid
+            if (relative.length) {
+                // if provided `relUID` wasnt relative and without sufix `--{index}`, append it to end as well
+                if (relUID.indexOf('--') === -1 && this.validPromise(this.ps[relUID])) {
+                    relative = [].concat(relative, this.ps[relUID].p).filter(z => !!z)
+                    refs = [].concat(refs, relUID).filter(z => !!z)
+                }
+
+                return { relative, refs }
+            } else return null
         }
 
         _getLastRef(uid) {
@@ -303,6 +380,7 @@ module.exports = (notify) => {
             } catch (err) {
                 console.log('-- err cresting listener ', err)
             }
+
             return this.xpromise // Object.assign(XPromise.prototype, this.xp)
         }
 
@@ -338,12 +416,10 @@ module.exports = (notify) => {
                     }
                     resolve(true)
                 })
-            }
-            for (var k in v) {
-                if (typeof v[k] === 'function') continue
-                if ((v[k] || {}).then !== undefined) continue
+            } // setPromise
 
-                // if already set continue
+            for (var k in v) {
+                if (this.isPromise(v[k])) continue
 
                 if (this.validPromise(v[k])) {
                     // resolve or reject
@@ -378,7 +454,7 @@ module.exports = (notify) => {
                         }
                     }
                 }
-            }
+            } // for
 
             this._ps = v
         }
@@ -391,6 +467,14 @@ module.exports = (notify) => {
             return false
         }
 
+        /**
+         * @validPromise
+         * check that each promise has correct setup
+         */
+        validPromise(v) {
+            return ((v || {}).p !== undefined && (v || {}).v !== undefined)
+        }
+
         delete(uid) {
             this.testUID(uid)
             if (uid) this.lastUID = uid
@@ -401,16 +485,8 @@ module.exports = (notify) => {
             delete this._xpromise[uid]
             delete this._ps[uid]
 
-            this.lastUID = null
+            // this.lastUID = null
             return this
-        }
-
-        /**
-         * @validPromise
-         * check that each promise has correct setup
-         */
-        validPromise(v) {
-            return ((v || {}).p !== undefined && (v || {}).v !== undefined)
         }
 
         testUID(UID) {
@@ -418,6 +494,7 @@ module.exports = (notify) => {
             if (!isString(UID)) throw ('PROVIDED UID MUST BE STRING')
             if (UID.split(' ').length > 1) throw ('UID MUST HAVE NO SPACES')
             if (isNumber(UID)) throw ('UID CANNOT BE A NUMBER')
+            if (UID.length < 2) throw ('UID MUST BE LONGER THEN 1 CHARS')
             return true
         }
     }

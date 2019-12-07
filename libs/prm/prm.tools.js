@@ -1,6 +1,7 @@
 module.exports = (notify, BatchCallbacks) => {
     if (!notify) notify = require('../notifications')(notify)
     const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
+    const XPromise = require('./x.promise')(notify)
     class PRMTOOLS extends BatchCallbacks {
         constructor(debug, opts) {
             super(debug, opts)
@@ -8,6 +9,18 @@ module.exports = (notify, BatchCallbacks) => {
             // PRMTOOLS
             this._fromRI = null
             this._lastFilteredArchData = null
+            this._xpromise = null
+        }
+
+        /**
+         * @XPromise instance
+         * read more about this micro service from the class instance
+         */
+        get xpromise() {
+            if (this._xpromise) return this._xpromise
+            this._xpromise = new XPromise(null, this.debug)
+
+            return this._xpromise
         }
 
         /**
