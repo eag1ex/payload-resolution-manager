@@ -34,6 +34,7 @@
  * `fin(uid)`: will return as promise: fin().then(d=>...)
  * `all`: a variable will return all current promises, so you can assign it to Promise.all(all)...
  * `pending`: a variable return index of currently active promises
+ * `exists(uid)` : check if uid/ref exists, if promise exists!
  */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
@@ -84,6 +85,16 @@ module.exports = (notify) => {
             // })
         }
 
+        /**
+         * @exists
+         * check if promise by uid/ref exists
+         * `uid` must provide uid
+        */
+        exists(uid) {
+            this.testUID(uid)
+            if (this.ps[uid]) return true
+            return false
+        }
         /**
          * @ref
          * set next available uid when chaining
