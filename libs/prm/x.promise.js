@@ -1,10 +1,5 @@
 
 /**
- * XPromise
- * cleaver promise
- */
-
-/**
   * example 1
   * var xp = new XPromise()
   * xp.p('123')
@@ -25,6 +20,10 @@
      xp.p().then(()=>)
   */
 
+/**
+ * @XPromise
+ * cleaver promise, similar to Q/defer, uses proto getter/setter with dynamic callback to send resolve state
+ */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isArray, isObject, isString, isNumber } = require('lodash')
@@ -50,38 +49,15 @@ module.exports = (notify) => {
             this.p(uid1)
 
             setTimeout(() => {
-                this.xp.resolve(uid1, 'abc')
+                this.xp.resolve(uid2, 'abc')
             }, 2000)
 
-            this.ref(uid2).then(z => {}, err => {
+            this.ref(uid1).onReady(z => {
+                console.log('onReady', z)
+            }, err => {
                 console.log('err', err)
             })
-            // this.xp.then(v => {
-            //     console.log('done1!', v)
-            // }, err => {
-            // })
-
-            // this.sync(uid1).then(z => {
-            //     console.log('done', z)
-            // })
-            // // console.log(this.xp.sync.then)
-
-            // this.p(uid2)
-            // setTimeout(() => {
-            //     this.xp.reject(uid2, 'defg')
-            // }, 2200)
-
-            // this.sync(uid2).then(z => {
-            //     console.log('done', z)
-            // }, err => {
-            //     console.log('err done 2', err)
-            // })
-
-            // this.p(uid2).then(v => {
-            //     console.log('done 2!', v)
-            // }, err => {
-            //     console.log('err 2!', err)
-            // })
+            // this.ref(uid2).fin().then()
 
             // console.log('pending', this.p().pending())
             // Promise.all(this.xp.all()).then(d => {
@@ -92,21 +68,30 @@ module.exports = (notify) => {
         }
 
         /**
+         * @ref
+         * set next available uid when chaining
+         */
+        ref(uid) {
+            if (uid) {
+                if (!this.ps[uid]) {
+                    if (this.debug) {
+                        notify.ulog(`[ref] uid does not match any available promise, did you set it yet?`, true)
+                    }
+                    return this
+                }
+                this.testUID(uid)
+                this.lastUID = uid
+            }
+            return this
+        }
+
+        /**
          * @p
          * auto set new promise, if doesnt already exist
          * `uid` provide uniq id for each promise
          */
-        ref(uid) {
-            if (uid) {
-                this.lastUID = uid
-                this.testUID(uid)
-            }
-            return this
-        }
         p(uid) {
-            if (uid) this.lastUID = uid
-            if (!uid && this.lastUID) uid = this.lastUID
-            this.testUID(uid)
+            uid = this._getLastRef(uid)
 
             if (!this.ps[uid]) {
                 this.ps[uid] = 'set'
@@ -145,9 +130,7 @@ module.exports = (notify) => {
          * set new promise
          */
         set(uid) {
-            if (uid) this.lastUID = uid
-            if (!uid && this.lastUID) uid = this.lastUID
-            this.testUID(uid)
+            uid = this._getLastRef(uid)
 
             // when setting force to delete any existing promises
             this.delete(uid)
@@ -159,13 +142,11 @@ module.exports = (notify) => {
 
         /**
          * @reject
-         * * `data` when provided data will be resolved in the end
-         * * `uid` declare uid if calling many promises
+         * `uid` declare uid if calling many promises
+         * `data` when provided data will be resolved in the end
          */
         reject(uid, data = null) {
-            if (uid) this.lastUID = uid
-            if (!uid && this.lastUID) uid = this.lastUID
-            this.testUID(uid)
+            uid = this._getLastRef(uid)
 
             if (!this.ps[uid]) {
                 if (this.debug) notify.ulog(`[reject] promise uid: ${uid} does not exist`, true)
@@ -190,13 +171,11 @@ module.exports = (notify) => {
 
         /**
          * @resolve
-         * * `data` when provided data will be resolved in the end
-         * * `uid` declare uid if calling many promises
+         * `uid` declare uid if calling many promises
+         * `data` when provided data will be resolved in the end
          */
         resolve(uid, data = null) {
-            if (uid) this.lastUID = uid
-            if (!uid && this.lastUID) uid = this.lastUID
-            this.testUID(uid)
+            uid = this._getLastRef(uid)
 
             if (!this.ps[uid]) {
                 if (this.debug) notify.ulog(`[resolve] promise uid: ${uid}  does not exist`, true)
@@ -223,10 +202,9 @@ module.exports = (notify) => {
          * @sync
          * sinc then cannot be used to copy behaviour, use `sync` as promise or await
          */
-        sync(uid) {
-            if (uid) this.lastUID = uid
-            if (!uid && this.lastUID) uid = this.lastUID
-            this.testUID(uid)
+        fin(uid) {
+            uid = this._getLastRef(uid)
+
             return this.ps[uid].p.then(z => {
                 this.delete(uid)
                 return Promise.resolve(z)
@@ -239,8 +217,9 @@ module.exports = (notify) => {
             // })
         }
 
-        then(cb, errCB) {
+        onReady(cb, errCB) {
             var uid = this.lastUID
+
             try {
                 this.testUID(uid)
             } catch (err) {
@@ -250,10 +229,7 @@ module.exports = (notify) => {
             if (!this.validPromise(this.ps[uid])) {
                 if (this.debug) notify.ulog(`[then] promise uid: ${uid} is invalid`, true)
                 var errMessage = `[then] promise uid: ${uid} is invalid`
-                // var r = new Promise((resolve, reject) => {
-                //     reject(errMessage)
-                // })
-                // this.rejects.push(r)
+
                 if (typeof errCB === 'function') errCB(errMessage)
                 return this
             }
@@ -284,6 +260,13 @@ module.exports = (notify) => {
             promises = [].concat(this.rejects, promises).filter(z => !!z)
             this.rejects = []// unset
             return promises
+        }
+
+        _getLastRef(uid) {
+            if (uid) this.lastUID = uid
+            if (!uid && this.lastUID) uid = this.lastUID
+            this.testUID(uid)
+            return uid || null
         }
 
         /**
@@ -339,6 +322,7 @@ module.exports = (notify) => {
             var setPromise = (id) => {
                 return new Promise((resolve, reject) => {
                     if (!this.promiseCBList[id]) {
+                        // wait for change in xpromise to initiate callback
                         this.promiseCBList[id] = (name, value, data) => {
                             var d = data !== null ? data : value
                             if (value === true) {
