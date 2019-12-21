@@ -29,6 +29,7 @@ var d = prm.set(d1, job50)
     .set(d3)
     .from(3) // will only make computes starting from(number)  < `_ri` index
     .compute(item => {
+        console.log('each cpmpute', item)
         // if (item._ri === 3) {
         //  item._uid = '10000_error' // protected cannot be changed
         //  item._ri = '-50'  // protected cannot be changed
@@ -51,7 +52,7 @@ var d = prm.set(d1, job50)
     .of(job50) // of what job
     .from(0) // from what `_ri` index
     .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
-        if (v.dataSet.age < 30) return true
+        return v.dataSet.age < 30
     })
     .compute(item => {
         // make more changes to job_50, starting from `_ri` index

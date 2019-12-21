@@ -1,7 +1,7 @@
 module.exports = (notify, BatchCallbacks) => {
     if (!notify) notify = require('../notifications')(notify)
     const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
-    const XPromise = require('./x.promise')(notify)
+    const XPromise = require('../xpromise/x.promise')(notify)
     class PRMTOOLS extends BatchCallbacks {
         constructor(debug, opts) {
             super(debug, opts)
@@ -10,6 +10,7 @@ module.exports = (notify, BatchCallbacks) => {
             this._fromRI = null
             this._lastFilteredArchData = null
             this._xpromise = null
+            this.pipeID = null
         }
 
         /**
@@ -18,9 +19,36 @@ module.exports = (notify, BatchCallbacks) => {
          */
         get xpromise() {
             if (this._xpromise) return this._xpromise
-            this._xpromise = new XPromise(null, this.debug)
+            const opts = {
+                // relSufix: '--', // preset default
+                showRejects: true, // show reject message in console
+                allowPipe: true } // if set Xpipe is enabled and you can pipe stream results of each (base) job
+            this._xpromise = new XPromise(null, opts, this.debug)
 
             return this._xpromise
+        }
+
+        pipe(cb, id) {
+            if (!id) id = this._lastUID
+            if (!this.xpromise.pipeExists(id)) {
+                notify.ulog(`pipe does not exist for id: ${id}`, true)
+                return this
+            }
+            // NOTE why timeout here? Because this `cb` is out of sync with this.xpromise class callabck
+            setTimeout(() => {
+                this.xpromise.pipe((d, err) => {
+                    if (err) {
+                        notify.ulog({ message: `pipe err`, err: err })
+                        return
+                    }
+                    // NOTE always return value
+                    const _dd = cb(d)
+                    var d = _dd === undefined ? true : _dd
+                    return d
+                })
+            }, 100)
+
+            return this
         }
 
         /**
@@ -68,11 +96,16 @@ module.exports = (notify, BatchCallbacks) => {
          * an ordinary `filter` method returned as a callback(value,index, ri) ? true:false
          * this tool will return filtered values for `compute` callback method where you can make thurder changes
          * leaving rest of data unchanged!
+         * `uid` optional if you want to force reorder of last job reference to continue
          */
-        filter(cb) {
-            if (!this._lastUID) return this
+        filter(cb, uid) {
+            if (uid) this._lastUID = uid
+            else uid = this._lastUID
+            this.valUID(uid)
+
+            if (!uid) return this
             if (!isFunction(cb)) return this
-            var data = cloneDeep(this.dataArch)[this._lastUID]
+            var data = cloneDeep(this.dataArch)[uid]
             if (isEmpty(data)) return this
             if (!isArray(data)) return this
             // set temporary data holder, extracted and reset via `dataArchWhich` method

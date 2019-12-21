@@ -30,10 +30,14 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
         }
 
+        /**
+         * @isPromise
+         * check if we are dealing with promise
+         */
         isPromise(d) {
-            if (isEmpty(d)) return false
-            if ((d || {}).then !== undefined) return true
-            if (typeof d === 'function') return true
+            if (!d) return false
+            var is_promise = (d || {}).__proto__
+            if (typeof (is_promise || {}).then === 'function') return true
 
             return false
         }
@@ -63,6 +67,31 @@ module.exports = (notify, PayloadResolutioManager) => {
                 }
             }
             return false
+        }
+
+        /**
+         * @whenTrue
+         * resolve on ok, only resolves to true
+         * `maxWait` time in ms, max time to wait for something or fail
+         * `ok`: when true, resolve!
+         *
+         */
+        whenTrue(maxWait, ok) {
+            return new Promise((resolve, reject) => {
+                var checkEvery = 20
+                maxWait = maxWait !== undefined ? maxWait : 100
+                var counter = 0
+                var timer = setInterval(() => {
+                    // resolve when either meets true
+                    if (ok === true || counter >= maxWait) {
+                        clearInterval(timer)
+                        resolve(true)
+                        console.log('ok in', counter)
+                        return
+                    }
+                    counter = counter + checkEvery
+                }, checkEvery)
+            })
         }
 
         /**
@@ -126,7 +155,7 @@ module.exports = (notify, PayloadResolutioManager) => {
             // track job history in strict mode
             if (this.strictMode) {
                 if (this.jobUID_history[uid] === true) {
-                    if (this.debug) notify.ulog(`[set] since we are in strictMode, this job was already completed once before!, job ignored!`, true)
+                    if (this.debug) notify.ulog(`since we are in strictMode, this job was already completed once before!, job ignored!`, true)
                     return true
                 }
                 if (this.jobUID_history[uid] === undefined) this.jobUID_history[uid] = false
