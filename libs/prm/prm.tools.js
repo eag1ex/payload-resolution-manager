@@ -108,11 +108,14 @@ module.exports = (notify, BatchCallbacks) => {
             var data = cloneDeep(this.dataArch)[uid]
             if (isEmpty(data)) return this
             if (!isArray(data)) return this
+
             // set temporary data holder, extracted and reset via `dataArchWhich` method
             this._lastFilteredArchData = data.filter((val, index) => {
                 if (this._fromRI !== undefined) {
                     // if from was set filter only matching
-                    if (!(val._ri >= this._fromRI)) return false
+                    if (!(val._ri >= this._fromRI)) {
+                        return false
+                    }
                 }
                 var v
                 try {
@@ -123,6 +126,7 @@ module.exports = (notify, BatchCallbacks) => {
                 }
                 return v || false
             })
+
             return this
         }
 

@@ -154,7 +154,7 @@ module.exports = (PRM, notify) => {
 
         updateSet(newData, uid, pipe = true) {
             if (!this.asAsync) return super.updateSet(newData, uid)
-            // if (!pipe) return super.updateSet(newData, uid)
+            if (!pipe) return super.updateSet(newData, uid)
 
             if (!uid) uid = this._lastUID
             else this._lastUID = uid

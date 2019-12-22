@@ -65,7 +65,7 @@ module.exports = (notify) => {
          * all available attrs that can be passed to each set item of each `_uid`
          */
         get dataArchAttrs() {
-            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
+            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete', 'error']
         }
 
         timestamp() {
@@ -276,6 +276,9 @@ module.exports = (notify) => {
                             el[dataRef] = itm[head(anonymousKey)] // newData
                             el['_ri'] = z._ri
                             el['_uid'] = z._uid
+
+                            if (z._error) el['error'] = z._error
+
                             if (z.complete !== undefined) el['complete'] = z.complete
                             el['_timestamp'] = z._timestamp
                         } else {
@@ -359,32 +362,11 @@ module.exports = (notify) => {
 
             if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
 
-            if (this.strictJob(uid) === true) {
+            const conditionValidate = this.computeConditionValidate(uid, cb)
+            if (!conditionValidate) {
                 return this
             }
-
-            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
-
-            if (isEmpty(originalFormat)) {
-                return this
-            }
-
-            if (this.dataArchSealed[uid] && uid !== false) {
-                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
-                return this
-            }
-
-            if (!isFunction(cb)) {
-                if (this.debug) notify.ulog(`[compute] pointless without callback, nothing changed`, true)
-                return this
-            }
-
-            // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
-            var refCondition = this.grab_ref[uid] || uid === false
-            if (!refCondition) {
-                if (this.debug) notify.ulog(`[compute] no refCondition met, nothing done`, true)
-                return this
-            }
+            const { originalFormat } = conditionValidate
 
             var updateData
             // grab original references
@@ -393,20 +375,30 @@ module.exports = (notify) => {
             this._itemDataSet = null
 
             // catch all callback error handling thru here
-            var cb_sandbox = (updatedData, skipIndex = null) => {
+            var cb_sandbox = async(updatedData, skipIndex = null) => {
                 var updated = null
                 try {
-                    updated = cb(updatedData)
+                    updated = await cb(updatedData) // check for error so we can assing `error` property on rejection!
                 } catch (err) {
                     if (this.debug && skipIndex !== null) notify.ulog({ errro: err, message: no_uid_no_item.message }, true)
+                    if (!isObject(err)) {
+                        if (this.debug) notify.ulog(`promise rejection is not an object, you should return PrmProto object`, true)
+                        throw ('error')
+                    }
+
+                    var errDataSet = err.dataSet || true
+                    err.dataSet = null
+                    updated = err
+                    updated.__error = errDataSet
                 }
                 return updated
             }
 
-            var setNewForTypeAll = (data, originalFormat) => {
+            var setNewForTypeAll = (data, _originalFormat) => {
                 var itm = {}
-                itm['_ri'] = originalFormat['_ri']
-                itm['_uid'] = originalFormat['_uid']
+                itm['_ri'] = _originalFormat['_ri']
+                itm['_uid'] = _originalFormat['_uid']
+                if ((data || {}).__error) itm['error'] = (data || {}).__error
                 itm['_timestamp'] = this.timestamp() // set new time
                 itm['dataSet'] = data || null
                 if (this.autoComplete) itm['complete'] = true
@@ -441,8 +433,8 @@ module.exports = (notify) => {
                     if (inx !== null) i = inx // when for `each` index need to come from external loop
 
                     if (isObject(z) && !isArray(z)) {
-                        if (!z.dataSet) {
-                            itm = setNewForTypeAll(z, originalFormat[i])
+                        if (z.dataSet === undefined) {
+                            itm = setNewForTypeAll(z, head(originalFormat))
                             // if no dataSet lets remake last before update
                             //  if (this.debug) notify.ulog(`[compute] .dataSet must be set for all user values or it will return null`)
                         } else {
@@ -450,13 +442,14 @@ module.exports = (notify) => {
                             itm['_uid'] = z._uid || uid
                             itm['_timestamp'] = this.timestamp() // set new time
                             if (z.complete !== undefined) itm['complete'] = z.complete
-
+                            if ((z || {}).__error) itm['error'] = (z || {}).__error
                             itm['dataSet'] = z.dataSet || null
                             if (this.autoComplete) itm['complete'] = true
                         }
 
                         try {
-                            if (Object.keys(z).length > 4) {
+                            // NOTE increment length of keys to validate when dataArchAttrs are updated overtime
+                            if (Object.keys(z).length > 5) {
                                 var ignored = Object.keys(z).filter(n => {
                                     var except = this.dataArchAttrs.filter(nn => nn !== n).length > Object.keys(z).length
                                     //  var vld = n !== '_ri' && n !== '_uid' && n !== 'dataSet' && n !== '_timestamp' && n !== 'complete'
@@ -479,6 +472,7 @@ module.exports = (notify) => {
                         if (uid) itm['_uid'] = uid
                         itm['_timestamp'] = this.timestamp()
                         itm['dataSet'] = z || null
+                        if ((z || {}).__error) itm['error'] = (z || {}).__error
                         if (this.autoComplete) itm['complete'] = true
                     }
 
@@ -641,33 +635,7 @@ module.exports = (notify) => {
              * ################################
              */
             // if (uid) delete this.grab_ref[uid]
-            if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
-
-            if ((updateData || []).length) {
-                /// update only those which match ri to previously declared sets!
-                for (var i = 0; i < updateData.length; i++) {
-                    var updItem = updateData[i]
-                    if (isEmpty(updItem)) {
-                        if (this.debug) notify.ulog(`[compute] warning item to update is empty, skipping`)
-                        continue
-                    }
-
-                    var _uid = uid === false ? updItem._uid : uid
-                    if (!this.dataArch[_uid]) continue
-
-                    var itmPosIndex = updItem._ri
-                    if (this.dataArch[_uid][itmPosIndex]) {
-                        if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
-                            try {
-                                this.dataArch[_uid][itmPosIndex] = updItem
-                            } catch (err) {
-                                if (this.debug) notify.ulog(err, true)
-                            }
-                        }
-                    }
-                }
-                this.dataArch = Object.assign({}, this.dataArch)
-            }
+            this.computeFinalize(uid, updateData)
 
             return this
         }
@@ -684,33 +652,11 @@ module.exports = (notify) => {
 
             if (!uid) uid = false // make sure its false when all else fails when we will use `itemDataSet` if declared
 
-            if (this.strictJob(uid) === true) {
+            const conditionValidate = this.computeConditionValidate(uid, cb)
+            if (!conditionValidate) {
                 return this
             }
-            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
-
-            if (isEmpty(originalFormat)) {
-                return this
-            }
-
-            if (this.dataArchSealed[uid] && uid !== false) {
-                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
-                return this
-            }
-
-            if (!isFunction(cb)) {
-                if (this.debug) notify.ulog(`[compute] pointless without callback, nothing changed`, true)
-                return this
-            }
-
-            // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
-            var refCondition = this.grab_ref[uid] || uid === false
-            if (!refCondition) {
-                if (this.debug) notify.ulog(`[compute] no refCondition met, nothing done`, true)
-                return this
-            }
-
-            const uidRef = `${uid}` // use with XPromise
+            const { originalFormat } = conditionValidate
 
             var updateData
             // grab original references
@@ -767,7 +713,7 @@ module.exports = (notify) => {
                     if (inx !== null) i = inx // when for `each` index need to come from external loop
 
                     if (isObject(z) && !isArray(z)) {
-                        if (!z.dataSet) {
+                        if (z.dataSet === undefined) {
                             itm = setNewForTypeAll(z, originalFormat[i])
                             // if no dataSet lets remake last before update
                             //  if (this.debug) notify.ulog(`[compute] .dataSet must be set for all user values or it will return null`)
@@ -861,7 +807,6 @@ module.exports = (notify) => {
                 if ((initialData || []).length) initialData = this.loopAssingMod(initialData)
 
                 var loopd = []
-                var loopdDoneRef = uidRef + `__` + new Date().getTime()
 
                 var loop = (i) => {
                     if (initialData[i]) {
@@ -878,6 +823,7 @@ module.exports = (notify) => {
                             }
                             if (_u) _u = flatMap([_u])
 
+                          
                             if (_u.length > 1 || !isArray(_u)) {
                                 notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
 
@@ -901,33 +847,13 @@ module.exports = (notify) => {
                             loop(i)
                         }
 
-                        // do for each callback
-                        var u = cb_sandbox(z, skipINX)
-                        if (this.asAsync) {
-                            this.xpromise.defer(uidRef)
-                                .consume(uidRef, u) // regardless if provided is a promise or not, will make it so
-                                .asPromise().then(z => {
-                                    perLoop(z)
-                                }, err => {})
-                        } else {
-                            perLoop(u)
-                        }
+                        perLoop(z)
                     } else {
                         loopd = loopd.filter(z => z !== undefined)
-                        if (this.asAsync) {
-                            this.xpromise.resolve(loopdDoneRef, loopd)
-                        }
                     }
                 }
-                // set ref for loop completion so we can continue with executions
-                if (this.asAsync) this.xpromise.defer(loopdDoneRef)
-                loop(0)
 
-                if (this.asAsync) {
-                    return this.xpromise.defer(loopdDoneRef).asPromise().then(z => {
-                        return z
-                    })
-                }
+                loop(0)
 
                 return loopd
             }
@@ -988,6 +914,11 @@ module.exports = (notify) => {
              * ################################
              */
             // if (uid) delete this.grab_ref[uid]
+            this.computeFinalize(uid, updateData)
+            return this
+        }
+
+        computeFinalize(uid, updateData) {
             if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
 
             if ((updateData || []).length) {
@@ -1001,7 +932,6 @@ module.exports = (notify) => {
 
                     var _uid = uid === false ? updItem._uid : uid
                     if (!this.dataArch[_uid]) continue
-
                     var itmPosIndex = updItem._ri
                     if (this.dataArch[_uid][itmPosIndex]) {
                         if (this.dataArch[_uid][itmPosIndex]._uid === _uid) {
@@ -1013,10 +943,47 @@ module.exports = (notify) => {
                         }
                     }
                 }
+
+                // NOTE when we filter not all items are passed, so have to set update to non filtered data as well
+                if (this.autoComplete) {
+                    this.dataArch[uid].forEach((item, inx) => {
+                        item.complete = true
+                    })
+                }
+
                 this.dataArch = Object.assign({}, this.dataArch)
             }
-
             return this
+        }
+
+        computeConditionValidate(uid, cb) {
+            if (this.strictJob(uid) === true) {
+                return false
+            }
+            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
+
+            if (isEmpty(originalFormat)) {
+                return false
+            }
+
+            if (this.dataArchSealed[uid] && uid !== false) {
+                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
+                return false
+            }
+
+            if (!isFunction(cb)) {
+                if (this.debug) notify.ulog(`[compute] pointless without callback, nothing changed`, true)
+                return false
+            }
+
+            // NOTE if UID was set to false, it means we dont know exectly what value is provided, but we know that each dataSet has its own tag reference of `_uid` and `_ri`
+            var refCondition = this.grab_ref[uid] || uid === false
+            if (!refCondition) {
+                if (this.debug) notify.ulog(`[compute] no refCondition met, nothing done`, true)
+                return false
+            }
+
+            return { originalFormat }
         }
 
         /**
@@ -1071,8 +1038,9 @@ module.exports = (notify) => {
          * `dataRef` : provide if data does not include dataSet
          * `data` : provide data that you have worked on, should be same array index as as original
          * `external` when provided class will not check for size validation, but format must match
+         * `withErrors` in case you want to check for errors,  [{dataSet, error}]
          */
-        itemData(data, uid, dataRef, external = null) {
+        itemData(data, uid, dataRef, external = null, withErrors = null) {
             if (!uid) uid = this._lastUID
             else this._lastUID = uid
 
@@ -1097,7 +1065,10 @@ module.exports = (notify) => {
                 return reduce(cloneDeep(data), (n, el, i) => {
                     var df = dataRef || 'dataSet'
                     if (uid === el._uid) {
-                        n.push(el[df])
+                        // NOTE will return an object regardless there are errors or not
+                        if (withErrors === true) {
+                            n.push({ dataSet: el[df], error: el.error || null })
+                        } else n.push(el[df])
                     }
                     return n
                 }, [])
@@ -1226,7 +1197,7 @@ module.exports = (notify) => {
          * @_resolution_item
          * mothod called by resolution, to allow grouping calls
          */
-        _resolution_item(yourData, uid, dataRef, doDelete = true, pipe) {
+        _resolution_item(yourData, uid, doDelete = true, pipe) {
             var resSelf = !!(this.resSelf && !this.asAsync) // can use self if not using pipe
             resSelf = resSelf && !pipe ? true : resSelf // can override if using async when pipe is disabled
 
@@ -1235,7 +1206,7 @@ module.exports = (notify) => {
             this.valUID(uid)
 
             // find all payloads that belong to same uid
-            // `yourData` may no longer have `[dataSet]` per object item, you may provide `dataRef` instead
+
             // will validate all payload items against `resIndex`
 
             if (resSelf) this.d = null
@@ -1255,6 +1226,7 @@ module.exports = (notify) => {
             var fData = []
             var perDataSet = (d, _uid) => {
                 var data = []
+
                 for (var i = 0; i < d.length; i++) {
                     var item = d[i]
                     if (item._uid === undefined) {
@@ -1268,13 +1240,14 @@ module.exports = (notify) => {
 
             var providerData = isObject(yourData) && !isArray(yourData) ? yourData : this.dataArch
             providerData = cloneDeep(providerData)
+
             // set
             // cycle thru each reference
             for (var k in providerData) {
                 if (!providerData.hasOwnProperty(k)) continue
 
                 var itemDataSets = providerData[k]
-                if (itemDataSets.hasOwnProperty(dataRef)) itemDataSets = itemDataSets[dataRef]
+                // if (itemDataSets.hasOwnProperty('dataSet')) itemDataSets = itemDataSets['dataSet']
 
                 if (!itemDataSets) {
                     if (this.debug) notify.ulog(`itemDataSets not available`, true)
@@ -1287,7 +1260,6 @@ module.exports = (notify) => {
                         job.complete = true
                     })
                 }
-
                 fData = [].concat(perDataSet(itemDataSets, uid), fData)
             }
 
@@ -1325,33 +1297,22 @@ module.exports = (notify) => {
                 this._lastItemData = fData
 
                 for (var n = 0; n < fData.length; n++) {
-                    var item = fData[n]
-
+                    var item = this.purgeEmpty(fData[n])
                     // check if item is an object of arrays
                     if (isObject(item) && !isArray(item)) {
-                        // get anonymous keyName `most likely dataSet`
-                        var anonymousKey = Object.keys(item)
-                        anonymousKey = head(anonymousKey.filter(z => {
-                            var not_uid = z !== '_uid'
-                            var not_ri = z !== '_ri'
-                            var not_timestemp = z !== '_timestamp'
-                            var not_complete = z !== 'complete'
-                            return not_uid && not_ri && not_timestemp && not_complete
-                        }))
-
-                        var itm = fData[n][anonymousKey]
-
                         // NOTE if set resolution will only take to accout all dataSets that are marked as `complete`
                         if (this.onlyComplete === true) {
-                            if (fData[n].complete === true && itm !== undefined) {
-                                output.push(itm)
-                                continue
+                            if (item.complete === true && item !== undefined) {
+                                if (item.error !== undefined) {
+                                    output.push({ dataSet: item.dataSet, error: item.error })
+                                } else output.push(item.dataSet)
                             }
-                        }
-
-                        if (itm !== undefined && !this.onlyComplete) {
-                            output.push(itm)
                             continue
+                        } else {
+                            if (item.dataSet !== undefined && !this.onlyComplete) {
+                                output.push(item.dataSet)
+                            }
+                            if (item.error !== undefined && !this.onlyComplete) output.push({ dataSet: item.dataSet, error: item.error })
                         }
                     }
                 }
@@ -1773,6 +1734,7 @@ module.exports = (notify) => {
          * - will label each payload[index] with `_uid` and `resIndex` < resolution index
          * - will test data is an array
          *  sets dataArch[uid]:[{dataSet,_uid, _ri},...]
+         * NOTE we cannot set initial data as error, in case it was async rejection, you have to take care of what is inputed to set() initialy
          */
         setRequestPayload(data, _uid) {
             this.valUID(_uid)

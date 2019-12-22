@@ -4,7 +4,7 @@
  */
 module.exports = (notify, PayloadResolutioManager) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isArray, isString } = require('lodash')
+    const { isEmpty, isArray, isString, cloneDeep, reduce, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     class PRMHelpers extends PayloadResolutioManager {
         constructor(debug, opts) {
@@ -28,6 +28,20 @@ module.exports = (notify, PayloadResolutioManager) => {
                     else return new PrmProto(this.debug).assign(dataSetItem, null, null, lock)
                 }
             }
+        }
+
+        /**
+         * @purgeEmpty
+         * purge undefined object elms, and remove empty error if any
+         */
+        purgeEmpty(obj = {}) {
+            if (isObject(obj) && isArray(obj)) return null
+            var copy = omitBy(cloneDeep(obj), isUndefined)
+            return reduce(copy, (n, el, k) => {
+                n[k] = el
+                if (k === 'error' && isEmpty(n[k])) delete n[k]
+                return n
+            }, {})
         }
 
         /**
@@ -86,7 +100,6 @@ module.exports = (notify, PayloadResolutioManager) => {
                     if (ok === true || counter >= maxWait) {
                         clearInterval(timer)
                         resolve(true)
-                        console.log('ok in', counter)
                         return
                     }
                     counter = counter + checkEvery
@@ -129,11 +142,9 @@ module.exports = (notify, PayloadResolutioManager) => {
             if (isEmpty(data)) return false
             if (isArray(data)) return false
 
-            var ignoreCompete = this.dataArchAttrs.length !== Object.keys(data).length
-            return this.dataArchAttrs.filter(z => {
-                if (z === 'complete' && ignoreCompete) return false// ignore this one
-                if (data[z] !== undefined) return true
-            }).filter(z => !!z).length === Object.keys(data).length
+            var attrsFiltered = this.dataArchAttrs.filter(z => z !== 'error' && z !== 'complete')
+            var dataCopy = omit(data, ['complete', 'error'])
+            return attrsFiltered.length === Object.keys(dataCopy).length
         }
 
         availRef(uid) {

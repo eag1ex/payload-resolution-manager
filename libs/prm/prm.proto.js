@@ -5,7 +5,7 @@
 */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, reduce, isObject, isArray } = require('lodash')
+    const { isEmpty, reduce, isObject, isArray, omit } = require('lodash')
 
     class PrmProto {
         constructor(debug) {
@@ -14,18 +14,16 @@ module.exports = (notify) => {
         }
 
         get props() {
-            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete']
+            return ['dataSet', '_uid', '_ri', '_timestamp', 'complete', 'error']
         }
 
         testdataSet(data) {
             if (isEmpty(data)) return false
             if (isArray(data)) return false
 
-            var ignoreCompete = this.props.length !== Object.keys(data).length
-            return this.props.filter(z => {
-                if (z === 'complete' && ignoreCompete) return false// ignore this one
-                if (data[z] !== undefined) return true
-            }).filter(z => !!z).length === Object.keys(data).length
+            var attrsFiltered = this.props.filter(z => z !== 'error' && z !== 'complete')
+            var dataCopy = omit(data, ['complete', 'error'])
+            return attrsFiltered.length === Object.keys(dataCopy).length
         }
 
         // NOTE doesnt work well with dynamic changes

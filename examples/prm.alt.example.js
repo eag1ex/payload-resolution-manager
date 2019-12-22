@@ -29,7 +29,7 @@ prm.set([{ data: 'abc', age: 10 }], 'job1')
     })
     .compute(d => {
         d.dataSet = 'hello promise'
-        return Promise.resolve(d)
+        return Promise.reject(d)
     }, 'each')
     .resolution()
     .pipe((d) => {
