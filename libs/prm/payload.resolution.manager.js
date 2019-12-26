@@ -823,7 +823,6 @@ module.exports = (notify) => {
                             }
                             if (_u) _u = flatMap([_u])
 
-                          
                             if (_u.length > 1 || !isArray(_u)) {
                                 notify.ulog(`[compute], each option you must return only 1 item per callback, nothing updated`, true)
 
@@ -1468,6 +1467,7 @@ module.exports = (notify) => {
                         dataReduced.push(job)
                     }
                 }
+                console.log('this._fromRI', this._fromRI, dataReduced, dataArch_copy)
                 dataArch_copy = dataReduced
             }
 
