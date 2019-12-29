@@ -8,7 +8,7 @@ const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 const { cloneDeep } = require('lodash')
 const options = {
-    asAsync: true, // to allow async returns, when set all data is passed asyncronously and need to use `pipe` to get each new update
+    asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
     strictMode: true, // make sure jobs of the same uid cannot be called again!
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
     batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready

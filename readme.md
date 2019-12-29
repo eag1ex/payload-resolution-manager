@@ -22,7 +22,7 @@
  - Lodash, ES6, javascript, node.js
 
 ##### Usage
-- Examples in `./examples/index.js and ./examples/app.example.js`
+- Examples in `./examples/index.js and ./examples/..` folder
 
 
 ##### Features:
