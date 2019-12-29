@@ -39,7 +39,7 @@ prm.set(assignONE.cusListA, assignONE.jobID)
     .set(asyncData(1000, assignONE.cusListB)) // add more customers to `jobID1`
     .filter((v, index) => {
         // bill gates account number
-        if (v.dataSet.accountNumber === '23497344567867') return true
+        return (v.dataSet.accountNumber === '23497344567867')
     })
     // compute some logic based on previous selection
     .compute(async(d) => {
@@ -60,7 +60,7 @@ prm.set(assignONE.cusListA, assignONE.jobID)
     .set(assignTWO.cusListB)
     .filter((v, index) => {
         // Warren Buffet account number
-        if (v.dataSet.accountNumber === '345567898074') return true
+        return (v.dataSet.accountNumber === '345567898074')
     })
     // .markDone(assignTWO.jobID) NOTE when set, can ignore future changes to this job
 // compute some logic based on previous selection

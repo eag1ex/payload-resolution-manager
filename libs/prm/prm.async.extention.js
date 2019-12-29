@@ -105,8 +105,9 @@ module.exports = (PRM, notify) => {
             this.valUID(uid)
             setTimeout(() => {
                 this.xpromise.initPipe(uid, true) // only called initially if never set
-                    .pipe((d) => {
-                        const dd = super.resolution(externalData, uid, dataRef, doDelete)
+                    .pipe(async(d) => {
+                        var extData = await (externalData || null)
+                        const dd = super.resolution(extData, uid, dataRef, doDelete)
                         return dd
                     }, uid)
             }, this._pipeDelay)
