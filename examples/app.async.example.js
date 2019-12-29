@@ -77,7 +77,7 @@ prm.set(assignONE.cusListA, assignONE.jobID)
         console.log('resolution() for jobID2', d)
     }, assignTWO.jobID)
 
-// NOTE return both jobs when `resolution()` is complete
+// NOTE return both when `resolution()` for each job is complete
 prm.batchReady([assignONE.jobID, assignTWO.jobID], 'flat', data => {
     notify.ulog({ message: 'batchReady results', data })
 })
