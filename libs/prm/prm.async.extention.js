@@ -23,8 +23,8 @@ module.exports = (PRM, notify) => {
         //     if (!this.asAsync) return super.getSet(uid, _self)
         //     if (!pipe) return super.getSet(uid, _self)
 
-        //     if (!uid) uid = this._lastUID
-        //     else this._lastUID = uid
+        //     if (!uid) uid = this.lastUID
+        //     else this.lastUID = uid
         //     this.valUID(uid)
 
         //     this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -38,8 +38,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.filter(cb, uid)
             if (!pipe) return super.filter(cb, uid)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             this.valUID(uid)
             this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -52,8 +52,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.markDone(uid)
             if (!pipe) return super.markDone(uid)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
             this.xpromise.initPipe(uid, true) // only called initially if never set
                 .pipe((d) => {
@@ -62,18 +62,13 @@ module.exports = (PRM, notify) => {
             return this
         }
 
-        from(RI, pipe = true) {
-            if (!this._lastUID) return this
-            const UID = this._lastUID
-            if (!this.asAsync) return super.from(RI)
-            if (!pipe) return super.from(RI)
-
-            this.xpromise.initPipe(UID, true) // only called initially if never set
-                .pipe((d) => {
-                    super.from(RI)
-                }, UID)
-            return this
+        from(RI) {
+            if (this.asAsync) {
+                if (this.debug) notify.ulog(`[from] [notice] no support for from() with asAsync option, nothig done`)
+                return this
+            } else super.from(RI)
         }
+
         of(UID, pipe = true) {
             if (!this.asAsync) return super.of(UID)
             if (!pipe) return super.of(UID)
@@ -89,8 +84,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.computeB(cb, method, uid)
             if (!pipe) return super.computeB(cb, method, uid)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             setTimeout(() => {
@@ -105,8 +100,8 @@ module.exports = (PRM, notify) => {
         resolution(externalData, uid, dataRef, doDelete = true, pipe = true) {
             if (!this.asAsync) return super.resolution(externalData, uid, dataRef, doDelete)
             if (!pipe) return super.resolution(externalData, uid, dataRef, doDelete, pipe)
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
             setTimeout(() => {
                 this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -122,8 +117,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.delSet(uid, force)
             if (!pipe) return super.delSet(uid, force)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
             setTimeout(() => {
                 this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -138,8 +133,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.set(data, uid)
             if (!pipe) return super.set(data, uid)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -156,8 +151,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.updateSet(newData, uid)
             if (!pipe) return super.updateSet(newData, uid)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             this.xpromise.initPipe(uid, true) // only called initially if never set
@@ -174,8 +169,8 @@ module.exports = (PRM, notify) => {
             if (!this.asAsync) return super.updateSet(uid, ri, dataSet, type)
             if (!pipe) return super.updateSet(uid, ri, dataSet, type)
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             this.xpromise.initPipe(uid, true) // only called initially if never set

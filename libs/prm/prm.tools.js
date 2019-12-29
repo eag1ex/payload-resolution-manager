@@ -29,11 +29,12 @@ module.exports = (notify, BatchCallbacks) => {
         }
 
         pipe(cb, id) {
-            if (!id) id = this._lastUID
+            if (!id) id = this.lastUID
             if (!this.xpromise.pipeExists(id)) {
                 notify.ulog(`pipe does not exist for id: ${id}`, true)
                 return this
             }
+
             // NOTE why timeout here? Because this `cb` is out of sync with this.xpromise class callabck
             setTimeout(() => {
                 this.xpromise.pipe((d, err) => {
@@ -42,7 +43,7 @@ module.exports = (notify, BatchCallbacks) => {
                         return
                     }
                     // NOTE always return value
-                    const _dd = cb(d)
+                    const _dd = cb(d, err)
                     var d = _dd === undefined ? true : _dd
                     return d
                 })
@@ -64,7 +65,7 @@ module.exports = (notify, BatchCallbacks) => {
                 if (this.debug) notify.ulog(`[of] UID invalid, not found`, true)
                 return this
             }
-            this._lastUID = UID
+            this.lastUID = UID
             return this
         }
 
@@ -75,14 +76,14 @@ module.exports = (notify, BatchCallbacks) => {
          * `RI` if not set nothing will be chenged
          */
         from(RI) {
-            if (RI === undefined) return this
+            if (RI === undefined || RI === null) return this
             var _ri = Number(RI)
             if (!isNumber(_ri)) {
                 if (this.debug) notify.ulog(`[from] RI must be a number, without decilams`, true)
                 return this
             }
 
-            if (!this._lastUID) {
+            if (!this.lastUID) {
                 if (this.debug) notify.ulog(`[from] last uid not found, not sure where to start RI index`, true)
                 return this
             }
@@ -99,8 +100,8 @@ module.exports = (notify, BatchCallbacks) => {
          * `uid` optional if you want to force reorder of last job reference to continue
          */
         filter(cb, uid) {
-            if (uid) this._lastUID = uid
-            else uid = this._lastUID
+            if (uid) this.lastUID = uid
+            else uid = this.lastUID
             this.valUID(uid)
 
             if (!uid) return this
@@ -135,9 +136,9 @@ module.exports = (notify, BatchCallbacks) => {
          * does not make any alterations, just taps in to last data changes, so you can view them
         */
         tap(cb) {
-            if (!this._lastUID) return this
+            if (!this.lastUID) return this
             if (!isFunction(cb)) return this
-            var data = cloneDeep(this.dataArch)[this._lastUID]
+            var data = cloneDeep(this.dataArch)[this.lastUID]
             if (isEmpty(data)) return this
             data.map((z, i) => {
                 try {

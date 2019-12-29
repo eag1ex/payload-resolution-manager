@@ -1,13 +1,13 @@
 
 /**
  * @BatchCallbacks
-* assing callback properties to batchResolution
+* assing callback properties to batchReady
 */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isString, uniq, reduce, indexOf } = require('lodash')
     /**
-     * assing callback properties to batchResolution
+     * assing callback properties to batchReady
      */
     class BatchCallbacks {
         constructor(debug) {

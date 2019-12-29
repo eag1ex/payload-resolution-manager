@@ -47,7 +47,7 @@ module.exports = (notify) => {
             this.batchDataArch = {} // collect jobs athat belong to a batch if `batch=true` is set
 
             this._uidsetting = {} // user defind setting updated via `costumization` method
-            this._lastUID = null // last updated uid
+            this.lastUID = null // last updated uid
             this._lastItemData = null // last updated at `resolution` methode
             this.singleSet = null // return only set that was updated
             this.d = null // updated via `set` methode
@@ -92,8 +92,8 @@ module.exports = (notify) => {
          * - with wrap your payload as array in resolution format
          */
         set(data, uid) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             if (this.dataArchSealed[uid]) {
@@ -121,8 +121,8 @@ module.exports = (notify) => {
          * `type` : merge > you want to merge old with new , new> you want to replace the orl
          */
         updateDataSet(uid, _ri, newDataSet = null, type = 'new') {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             if (this.strictJob(uid) === true) {
@@ -190,8 +190,8 @@ module.exports = (notify) => {
          * `newData` must provide raw data returned from `set` or use `getSet(uid)` and return it here
          */
         updateSet(newData, uid) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             if (this.strictJob(uid) === true) {
                 return this
@@ -355,8 +355,8 @@ module.exports = (notify) => {
          * `itemDataSet:` when we want to use `each` callback when `uid` is anonymous/unset, we need to update dataSet first, to be able to loop thru it later.
          */
         async computeA(cb, method = 'all', uid) {
-            if (!uid && uid !== false) uid = this._lastUID
-            else if (uid !== false) this._lastUID = uid
+            if (!uid && uid !== false) uid = this.lastUID
+            else if (uid !== false) this.lastUID = uid
 
             if (uid !== false) this.valUID(uid)
 
@@ -645,8 +645,8 @@ module.exports = (notify) => {
          * copy of computeA, but non async
          */
         computeB(cb, method = 'all', uid) {
-            if (!uid && uid !== false) uid = this._lastUID
-            else if (uid !== false) this._lastUID = uid
+            if (!uid && uid !== false) uid = this.lastUID
+            else if (uid !== false) this.lastUID = uid
 
             if (uid !== false) this.valUID(uid)
 
@@ -966,7 +966,7 @@ module.exports = (notify) => {
             }
 
             if (this.dataArchSealed[uid] && uid !== false) {
-                if (this.debug) notify.ulog(`you cannot perform any calculation after data was marked, nothing changed!`, true)
+                if (this.debug) notify.ulog(`you cannot perform any calculation for ${uid} after data was marked, nothing changed!`, true)
                 return false
             }
 
@@ -990,13 +990,13 @@ module.exports = (notify) => {
          * only call reset with `force=true`
          */
         reset(uid, force = true) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             if (!force) return
             this._lastItemData = null
             delete this.dataArchSealed[uid]
             delete this.grab_ref[uid]
-            this._lastUID = null
+            this.lastUID = null
             this._itemDataSet = null
             this.d = null
             return this
@@ -1007,8 +1007,8 @@ module.exports = (notify) => {
          * - delete set by `uid`
          */
         delSet(uid, force = false) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             this.valUID(uid)
 
@@ -1040,8 +1040,8 @@ module.exports = (notify) => {
          * `withErrors` in case you want to check for errors,  [{dataSet, error}]
          */
         itemData(data, uid, dataRef, external = null, withErrors = null) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             this.valUID(uid)
             if (!external) {
@@ -1085,8 +1085,8 @@ module.exports = (notify) => {
          * `external` when provided class will not check for size validation, but format must match
          */
         formated(data, uid, external = null) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             this.valUID(uid)
             if (!this.availRef(uid) && !external) return null
@@ -1116,14 +1116,14 @@ module.exports = (notify) => {
         }
 
         /**
-         * @batchRes
+         * @batchReady
          * collect each completed job that belongs to a batch and return if all jobs are complete
          * after batch is returned only batch listed jobs are deleted from batchDataArch
          * `jobUIDS` specify jobUID's being worked on
          * `type` : can return as `flat` array or `grouped` object
          * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
          */
-        batchRes(jobUIDS = [], type = 'flat', doneCB = null) {
+        batchReady(jobUIDS = [], type = 'flat', doneCB = null) {
             if (!this.batch) return null
             if (!isArray(jobUIDS)) return null
             if (!jobUIDS.length) return null
@@ -1200,8 +1200,8 @@ module.exports = (notify) => {
             var resSelf = !!(this.resSelf && !this.asAsync) // can use self if not using pipe
             resSelf = resSelf && !pipe ? true : resSelf // can override if using async when pipe is disabled
 
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             this.valUID(uid)
 
             // find all payloads that belong to same uid
@@ -1389,8 +1389,8 @@ module.exports = (notify) => {
                     return this
                 } else return d
             } else {
-                if (!uid) uid = this._lastUID
-                else this._lastUID = uid
+                if (!uid) uid = this.lastUID
+                else this.lastUID = uid
                 this.valUID(uid)
                 return this._resolution_item(externalData, uid, dataRef, doDelete)
             }
@@ -1403,8 +1403,8 @@ module.exports = (notify) => {
          * - will also mark all dataSets as readyOnly so cannot be modified!
          */
         markDone(uid) {
-            if (!uid) uid = this._lastUID
-            else this._lastUID = uid
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
             this.valUID(uid)
             if (!this.dataArch[uid]) {
@@ -1429,17 +1429,17 @@ module.exports = (notify) => {
          */
         dataArchWhich() {
             const fromOK = this._fromRI !== undefined && this._fromRI !== null
-            const ofOK = this._lastUID !== undefined && this._lastUID !== null
+            const ofOK = this.lastUID !== undefined && this.lastUID !== null
             const filterOK = this._lastFilteredArchData !== undefined && this._lastFilteredArchData !== null
 
             if (!fromOK && !filterOK) {
-                return this.dataArch[this._lastUID]
+                return this.dataArch[this.lastUID]
             }
 
             var dataArch_copy = cloneDeep(this.dataArch)
 
             if (ofOK) {
-                dataArch_copy = dataArch_copy[this._lastUID] // takes priority
+                dataArch_copy = dataArch_copy[this.lastUID] // takes priority
             }
 
             // `filter(()=>)`
@@ -1476,7 +1476,7 @@ module.exports = (notify) => {
 
             if (isEmpty(dataArch_copy)) {
                 // if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
-                return this.dataArch[this._lastUID]
+                return this.dataArch[this.lastUID]
             }
 
             return dataArch_copy

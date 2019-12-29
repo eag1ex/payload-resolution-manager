@@ -2,7 +2,7 @@
 /**
  * Application, advance chaining example
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
- * using `batchRes`
+ * using `batchReady`
  */
 const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
@@ -10,7 +10,7 @@ const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 const options = {
     strictMode: true, // make sure jobs of the same uid cannot be called again!
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
-    batch: true, // after running `resolution` method, each job that is batched using `batchRes([jobA,jobB,jobC])`, only total batch will be returned when ready
+    batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
 }
@@ -101,7 +101,7 @@ var delayedJob = (() => {
     })
 })()
 
-prm.batchRes([job50, job60, job70], 'flat', d => {
+prm.batchReady([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
 

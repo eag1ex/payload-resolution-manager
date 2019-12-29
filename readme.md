@@ -3,16 +3,20 @@
 * License: `CC BY` 
 
 #### Description
-* Easy to use Micro Service for async data handling with Node.js
+* Easy to use full featured *Data Management Service* for async handling with Node.js
 * Good for: 
     - Sorting DATA at different states
     - Referencing and assesing jobs status
     - Validating results
-* Perhaps you manage many data sources and want to make sure they are in-sync and correct order 
-* Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index (`_ri`), and job id (`_uid`)
-* You can setup timely job batches for any number of jobs to be called when done.
-    - `For example` You issued 20 job requests, each 5 data sets [x5]. Since all requests are issued at different times, each will be out-of-order, `PRM` will track then with resolution index, and collect data by `_uid` in the end.
+    - returning async/ defered data
+    - munipulating independant jobs
 
+* Perhaps you manage many data sources and want to make sure they are in-sync
+* Individual jobs can be worked on independently, and will be tracked by resolution index (`_ri`), and job (`_uid`)
+* You can setup timely job batches for any number of jobs to be called when done.
+    - `For example` You issued 20 job requests with each 5 data sets [x5]. Since all requests are issued at different times, they will be out-of-order, `PRM` will track them with resolution index, and collect data by `_uid` in the end.
+
+* You can Provide async/defered data, and chain the calls, it will wait... Then continue after data becomes available, this is possible with the help of `XPromise/XPipe` (from another tool) available at : `https://bitbucket.org/eag1ex/xpromise` - take a look for more details.
 
 ##### Stack
  - Lodash, ES6, javascript, node.js
@@ -28,7 +32,7 @@
 /**
  * Application, advance chaining example
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
- * using `batchRes`
+ * using `batchReady`
  */
 
 const notify = require('../libs/notifications')()
@@ -36,7 +40,7 @@ const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
 const options = {
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
-    batch: true, // after running `resolution` method, each job that is batched using `batchRes([jobA,jobB,jobC])`, only total batch will be returned when ready
+    batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
 }
@@ -122,7 +126,7 @@ var delayedJob = (() => {
     })
 })()
 
-prm.batchRes([job50, job60, job70], 'flat', d => {
+prm.batchReady([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
 
@@ -142,7 +146,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 * `updateSet(newData,uid)` : provide raw data produced by `set` or use `getSet(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
-* `batchRes(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
+* `batchReady(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
      - `jobUIDS` :specify working job uids
      - `type`: can return as `flat`> array, or `grouped`> object
      - `cb:` when ready returns callback
@@ -165,8 +169,8 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 
 ###### Beta Tools
 * `of(uid)`: chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` > to start tracking from this job
-* `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`
-
+* `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`. 
+    - Notice no support for this method when using `async` option at the moment.
 
 ##### Example output:
 ```
@@ -193,6 +197,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 
 ##### log
 * 20/10/2019 > Payload Resolution Manager 1.0.0
+* 29/12/2019 > Payload Resolution Manager 1.6.0
 
 ##### Contact
  * Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=PayloadResolutionManager`

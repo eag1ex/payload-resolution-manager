@@ -34,9 +34,9 @@ module.exports = (PRM, exampleData, notify) => {
     PRM.resolution(null, 'job_2')
 
     // NOTE set batch resolution
-    // PRM.batchResolution(['job_1', 'job_2'])
+    // PRM.batchReadyolution(['job_1', 'job_2'])
 
-    // PRM.batchResolution(['job_1'])
+    // PRM.batchReadyolution(['job_1'])
     // .resolution(/** customData, `index11`, doDelete=true */)
     // notify.ulog({ job_1: nn })
 

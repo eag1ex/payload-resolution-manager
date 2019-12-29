@@ -6,12 +6,12 @@
 
 const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
-
+const { cloneDeep } = require('lodash')
 const options = {
     asAsync: true, // to allow async returns, when set all data is passed asyncronously and need to use `pipe` to get each new update
     strictMode: true, // make sure jobs of the same uid cannot be called again!
     onlyComplete: true, // `resolution` will only return dataSets marked `complete`
-    batch: true, // after running `resolution` method, each job that is batched using `batchRes([jobA,jobB,jobC])`, only total batch will be returned when ready
+    batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
 }
@@ -27,130 +27,122 @@ const asyncData = (time = 2000, data) => {
     })
 }
 
-/// -- job one
-const jobID1 = 'bank_1'
-const bankCustomerList1a = [
-    {
-        uid: 'steve_jobs_12345',
-        accountName: 'Steve Jobbs',
-        bankName: 'Swiss Bank',
-        accountNumber: '2346547435',
-        accountType: 'investment',
-        'SWIFT_BIC': '34575',
-        portfolio: 20000000000
-    }, // _RI = 0
-    {
-        uid: 'bill_gates_12345',
-        accountName: 'Bill Gates',
-        bankName: 'Swiss Bank',
-        accountNumber: '23497344567867',
-        accountType: 'investment',
-        'SWIFT_BIC': '34575',
-        portfolio: 50000000000
-    } // _RI = 1
-]
+const assignONE = {
+    jobID: 'bank_1',
+    cusListA: [
+        {
+            uid: 'steve_jobs_12345',
+            accountName: 'Steve Jobbs',
+            bankName: 'Swiss Bank',
+            accountNumber: '2346547435',
+            accountType: 'investment',
+            'SWIFT_BIC': '34575',
+            portfolio: 20000000000
+        }, // _RI = 0
+        {
+            uid: 'bill_gates_12345',
+            accountName: 'Bill Gates',
+            bankName: 'Swiss Bank',
+            accountNumber: '23497344567867',
+            accountType: 'investment',
+            'SWIFT_BIC': '34575',
+            portfolio: 50000000000
+        } // _RI = 1
+    ],
+    cusListB: [
+        { uid: 'warren_buffet_12345',
+            accountName: 'Warren Buffet',
+            bankName: 'Swiss Bank',
+            accountNumber: '345546768789',
+            accountType: 'investment',
+            'SWIFT_BIC': '34575',
+            portfolio: 100000000000
+        } // _RI = 2
+    ]
+}
 
-const bankCustomerList1b = [
-    { uid: 'warren_buffet_12345',
+const assignTWO = {
+    jobID: 'bank_2',
+    cusListA: [
+        {
+            uid: 'steve_jobs_12345',
+            accountName: 'Steve Jobbs',
+            bankName: 'ICBC',
+            accountNumber: '32456767876',
+            accountType: 'investment',
+            'SWIFT_BIC': '237687',
+            portfolio: 50000000000
+        }, // _RI = 3
+        {
+            uid: 'bill_gates_12345',
+            accountName: 'Bill Gates',
+            bankName: 'ICBC',
+            accountNumber: '3247890890',
+            accountType: 'investment',
+            'SWIFT_BIC': '4565',
+            portfolio: 90000000000
+        } // _RI = 4
+    ],
+    cusListB: [{ uid: `warren_buffet_12345`,
         accountName: 'Warren Buffet',
-        bankName: 'Swiss Bank',
-        accountNumber: '345546768789',
-        accountType: 'investment',
-        'SWIFT_BIC': '34575',
-        portfolio: 100000000000
-    } // _RI = 2
-]
-
-// -- job two
-const jobID2 = 'bank_2'
-const bankCustomerList2a = [
-    {
-        uid: 'steve_jobs_12345',
-        accountName: 'Steve Jobbs',
         bankName: 'ICBC',
-        accountNumber: '32456767876',
+        accountNumber: '345567898074',
         accountType: 'investment',
-        'SWIFT_BIC': '237687',
-        portfolio: 50000000000
-    }, // _RI = 3
-    {
-        uid: 'bill_gates_12345',
-        accountName: 'Bill Gates',
-        bankName: 'ICBC',
-        accountNumber: '3247890890',
-        accountType: 'investment',
-        'SWIFT_BIC': '4565',
-        portfolio: 90000000000
-    } // _RI = 4
-]
+        'SWIFT_BIC': '89456',
+        portfolio: 70000000000
+    }] // _RI = 5
+}
 
-const bankCustomerList2b = [{ uid: `warren_buffet_12345`,
-    accountName: 'Warren Buffet',
-    bankName: 'ICBC',
-    accountNumber: '345567898074',
-    accountType: 'investment',
-    'SWIFT_BIC': '89456',
-    portfolio: 70000000000
-}] // _RI = 5
-
-const broker = {
+const BROKER = {
     fee: 10000,
     name: 'Hongkong Investmonts',
     code: 'ABC1246'
 }
 
-prm.set(bankCustomerList1a, jobID1)
-    .set(asyncData(1000, bankCustomerList1b)) // add more customers to `jobID1`
-    // .updateDataSet(null, 0, { data2: 123 }, 'merge')
-    // .pipe(d => {
-    //     var nn = prm.getSet('job1')
-    //     for (var i = 0; i < nn.length; i++) {
-    //         nn[i].dataSet = Object.assign({}, { sex: 'male' }, nn[i].dataSet)
-    //     }
-    //     prm.updateSet(nn, 'job1')
-    // })
-    // .from(1) // select from `_ri` index
-    .filter((v, index) => { // filter all starting  from selected `_ri` index (if any)
+// NOTE setting job jobID1
+prm.set(assignONE.cusListA, assignONE.jobID)
+    .set(asyncData(1000, assignONE.cusListB)) // add more customers to `jobID1`
+    .filter((v, index) => {
         // bill gates account number
         if (v.dataSet.accountNumber === '23497344567867') return true
     })
     // compute some logic based on previous selection
-    .compute(d => {
-        d.dataSet.portfolio = d.dataSet.portfolio - broker.fee
-        delete broker.fee
-        d.dataSet.broker = broker
-        return asyncData(1500, d)
+    .compute(async(d) => {
+        var brokerData = await asyncData(1500, cloneDeep(BROKER))
+        d.dataSet.portfolio = d.dataSet.portfolio - brokerData.fee
+        delete brokerData.fee
+        d.dataSet.BROKER = brokerData
+        return d
     }, 'each')
     .resolution()
     .pipe((d) => {
-        // pipe final resolution
-        console.log('resolution jobID1', d)
-    }, jobID1)
-    .set(bankCustomerList2a, jobID2)
-    .set(bankCustomerList2b)
-    .of(jobID2)
-// .from(5) // select from `_ri` index // TODO fix from need to set uid for each from ri, when multiple jobs
-    .filter((v, index) => { // filter all starting  from selected `_ri` index (if any)
+        // NOTE pipe final resolution for >> this.lastUID
+        console.log('resolution() jobID1', d)
+    }, assignONE.jobID)
+
+    // NOTE setting job jobID2
+    .set(assignTWO.cusListA, assignTWO.jobID)
+    .set(assignTWO.cusListB)
+    .filter((v, index) => {
         // Warren Buffet account number
         if (v.dataSet.accountNumber === '345567898074') return true
     })
-    .compute(d => {
-        d.dataSet.portfolio = d.dataSet.portfolio - broker.fee
-        delete broker.fee
-        d.dataSet.broker = broker
-        return asyncData(1500, d)
+    .markDone(assignTWO.jobID)
+// compute some logic based on previous selection
+    .compute(async(d) => {
+        var brokerData = await asyncData(1500, cloneDeep(BROKER))
+        d.dataSet.portfolio = d.dataSet.portfolio - brokerData.fee
+        delete brokerData.fee
+        d.dataSet.BROKER = brokerData
+        return d
     }, 'each')
-    .resolution(jobID2)
+    .resolution()
     .pipe((d) => {
-        // pipe final resolution
-        console.log('resolution for jobID2', d)
-    }, jobID2)
-//  .of(jobID2) // select job
-    // .filter((v, index) => { // filter all starting  from selected `_ri` index (if any)
-    // // warren buffet account number
-    //     if (v.dataSet.accountNumber === '345567898074') return true
-    // })
+        // NOTE pipe final resolution for >> this.lastUID
+        console.log('resolution() for jobID2', d)
+    }, assignTWO.jobID)
 
-prm.batchRes([jobID1, jobID2], 'flat', d => {
-    notify.ulog({ batch: d, message: 'delayed results' })
+// NOTE return both jobs when `resolution()` is complete
+prm.batchReady([assignONE.jobID, assignTWO.jobID], 'flat', data => {
+    notify.ulog({ message: 'batchReady results', data })
 })
