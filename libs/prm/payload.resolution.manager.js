@@ -1019,6 +1019,8 @@ module.exports = (notify) => {
             delete this.dataArch[uid]
             delete this.resIndex[uid]
 
+            // NOTE `jobUID_history` sould never be purged, kept for reference
+
             // delSet is performed from resolution when option `doDelete is set`, followed by rest
 
             this.reset(uid, force)
@@ -1182,11 +1184,22 @@ module.exports = (notify) => {
                     var r = performResolution()
                     if (r === null) return
                     doneCB(r)
+                    // NOTE delete all cached data for this job
+                    times(jobUIDS.length, (inx) => {
+                        this.delSet(jobUIDS[inx], true)
+                    })
                 })
 
                 return null
             } else {
                 var ready = performResolution()
+
+                if (!isEmpty(ready)) {
+                    // NOTE delete all cached data for this job
+                    times(jobUIDS.length, (inx) => {
+                        this.delSet(jobUIDS[inx], true)
+                    })
+                }
                 // notify.ulog({ message: 'batchedJobs results', jobUIDS, batchedJobs: batchedJobs })
                 return ready
             }

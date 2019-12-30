@@ -21,7 +21,8 @@ exports.assignONE = {
         } // _RI = 1
     ],
     cusListB: [
-        { uid: 'warren_buffet_12345',
+        {
+            uid: 'warren_buffet_12345',
             accountName: 'Warren Buffet',
             bankName: 'Swiss Bank',
             accountNumber: '345546768789',
@@ -54,7 +55,8 @@ exports.assignTWO = {
             portfolio: 90000000000
         } // _RI = 4
     ],
-    cusListB: [{ uid: `warren_buffet_12345`,
+    cusListB: [{
+        uid: `warren_buffet_12345`,
         accountName: 'Warren Buffet',
         bankName: 'ICBC',
         accountNumber: '345567898074',
