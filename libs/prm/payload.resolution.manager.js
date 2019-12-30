@@ -1040,8 +1040,8 @@ module.exports = (notify) => {
             var copyIndex = cloneDeep(this.resIndex)
 
             delete this.dataArchSealed[uid]
-            delete this.dataArch[uid]
-            delete this.resIndex[uid]
+            delete this._dataArch[uid]
+            delete this._resIndex[uid]
 
             // NOTE `jobUID_history` sould never be purged, kept for reference
 
@@ -1277,6 +1277,12 @@ module.exports = (notify) => {
             var providerData = isObject(yourData) && !isArray(yourData) ? yourData : this.dataArch
             providerData = cloneDeep(providerData)
 
+            // NOTE
+            // do not continue if nothing todo
+            if (!providerData[uid]) {
+                if (!this.onlyCompleteJob) this.reset(uid)
+                return returnAS(null)
+            }
             // set
             // cycle thru each reference
             for (var k in providerData) {
@@ -1405,8 +1411,8 @@ module.exports = (notify) => {
 
         /**
          * @resolution
-         * - `resolution` will provide only `this.dataArch` from this class, unless you provide `externalData`
-         * that originaly came thru this class
+         * - provides `.dataArch` from this class, unless you provide `externalData` > must be valid `[PrmProto,..]`
+         * - when option `onlyCompleteJob` or `onlyCompleteSet` are selected, data will be resolved only if marked complete otherwise you can call `resolution()` repeatedly untill satisfied.
          * - sorl all `dataArch|externalData` to return coresponding dataSet by `uid`
          * - sets agains `resIndex` to make sure size of each payload matches the return for each dataset
          * - delete `dataArch|externalData` [index] and `resIndex`[index]
@@ -1418,7 +1424,7 @@ module.exports = (notify) => {
          * `pipe` pipe is used wiht prm.async.extention so not change it here
          * - return item
          */
-        resolution(externalData, uid, dataRef, doDelete = true, pipe) {
+        resolution(externalData = null, uid, dataRef, doDelete = true, pipe) {
             var resSelf = !!(this.resSelf && !this.asAsync) // can use self if not using pipe
             resSelf = resSelf && !pipe ? true : resSelf // can override if using async when pipe is disabled
             if (!externalData && isArray(uid)) {

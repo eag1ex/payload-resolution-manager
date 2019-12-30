@@ -102,7 +102,7 @@ var delayedJob = (() => {
 
 prm.batchReady([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
-    // NOTE PRM instance cache should be now reset
+    // NOTE PRM instance cache should be now be cleared/reset
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
 })
 
