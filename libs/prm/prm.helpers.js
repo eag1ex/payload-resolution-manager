@@ -4,7 +4,7 @@
  */
 module.exports = (notify, PayloadResolutioManager) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isArray, isString, cloneDeep, reduce, isUndefined, omit, isObject, omitBy } = require('lodash')
+    const { isEmpty, isArray, isString, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     class PRMHelpers extends PayloadResolutioManager {
         constructor(debug, opts) {
@@ -134,6 +134,84 @@ module.exports = (notify, PayloadResolutioManager) => {
         }
 
         /**
+         * @resolutionType
+         * provide resolution data base on {opts} setting, either `onlyCompleteSet` or `onlyCompleteJob`
+         * sould return one job base on `requirement`
+         * return { output, selected}
+         */
+        resolutionType(uid, fData, deleteCB, doDelete) {
+            var requirement = head([{ name: 'onlyCompleteSet', value: this.onlyCompleteSet },
+                { name: 'onlyCompleteJob', value: this.onlyCompleteJob }].filter(z => {
+                return z.value === true
+            }))
+
+            if (isEmpty(fData)) return []
+
+            const completedJobs = (_fData, onlyComplete = true) => {
+                const o = []
+                for (var n = 0; n < _fData.length; n++) {
+                    var item = this.purgeEmpty(_fData[n])
+                    // check if item is an object of arrays
+                    if (isObject(item) && !isArray(item)) {
+                        if (onlyComplete === true) {
+                            if (item.complete === true && item !== undefined) {
+                                if (item.error !== undefined) {
+                                    o.push({ dataSet: item.dataSet, error: item.error })
+                                } else o.push(item.dataSet)
+                            }
+                            continue
+                        } else {
+                            if (item.dataSet !== undefined && !this.onlyCompleteSet) {
+                                o.push(item.dataSet)
+                            }
+                            if (item.error !== undefined && !this.onlyCompleteSet) o.push({ dataSet: item.dataSet, error: item.error })
+                        }
+                    }
+                }
+                return o
+            }
+
+            const onSwitch = (req) => {
+                var output = []
+                const name = (req || {}).name || ''
+                switch (name) {
+                    // NOTE resolution will only take to accout all dataSets that are marked as `complete`
+
+                    case 'onlyCompleteSet':
+                        output = completedJobs(fData)
+                        break
+                    case 'onlyCompleteJob':
+                        const totaljobSize = fData.length
+                        output = completedJobs(fData)
+                        if (totaljobSize !== output.length) {
+                            output = []
+                            if (this.debug) notify.ulog(`[resolutionType] requirement to only set resolution if onlyCompleteJob is all complete, but not complete yet!, nothing to output`)
+                        }
+                        // code block
+                        break
+                    default:
+                        /// no requirement set output all data
+                        output = completedJobs(fData, false)
+                }
+
+                var assesmentComleted = this.dataAssesment(uid, fData)
+                if (assesmentComleted || doDelete) {
+                    // NOTE
+                    // in case we marked `onlyCompleteSet` as an option, but data still exists and not completed
+                    // so do not delete
+                    if (!isEmpty(output)) {
+                        deleteCB({ message: 'can delete cache' })
+                    }
+                }
+
+                return { output, selected: name || 'default' }
+            }
+
+            // should return one job data requirement or default:
+            return onSwitch(requirement)
+        }
+
+        /**
          * @validJobDataSet
          * test `PRM` data attributes is valid
          * return true/false
@@ -179,12 +257,15 @@ module.exports = (notify, PayloadResolutioManager) => {
          * @dataAssesment
          * check to see if all of jobs dataSets are marked `complete`, when they are issue delete of job uppon resolution
          * returns true/false/null
+         * dataAssesment is called in resolution stage
          */
         dataAssesment(uid, data) {
             this.valUID(uid)
             if (isEmpty(data)) return null
             if (!isArray(data)) return null
-            if (!this.onlyComplete) return null
+            // perform deletetion only if either is true
+            var onlyComlete = this.onlyCompleteSet || this.onlyCompleteJob
+            if (!onlyComlete) return null
 
             var archJobSetCount = (this.dataArch[uid] || []).length
             var finalDataComplCount = 0

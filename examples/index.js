@@ -6,7 +6,7 @@ const PayloadResolutioManager = require('../libs/prm/payload.resolution.manager'
 var debug = true
 const resx = new PayloadResolutioManager(debug,{
     strictMode: true, // make sure jobs of the same uid cannot be called again!
-   // onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+   // onlyCompleteSet: true, // `resolution` will only return dataSets marked `complete`
    // batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
    resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call

@@ -8,8 +8,8 @@ const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
 const options = {
-    strictMode: true, // make sure jobs of the same uid cannot be called again!
-    onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+    strictMode: true, // make sure jobs of same uid cannot be called again!
+    onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
     batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
@@ -35,7 +35,7 @@ var d = prm.set(d1, job50)
         item.dataSet.age = 70
         item.dataSet.occupation = 'retired'
         // } else item.dataSet.occupation = 'stock broker'
-        //  item.complete = true // because we set an option for `onlyComplete` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
+        //  item.complete = true // because we set an option for `onlyCompleteSet` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
         return item
     }, 'each')
 // .markDone() // no future changes are allowed to `job_50`
@@ -102,6 +102,8 @@ var delayedJob = (() => {
 
 prm.batchReady([job50, job60, job70], 'flat', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
+    // NOTE PRM instance cache should be now reset
+    // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
 })
 
 /**

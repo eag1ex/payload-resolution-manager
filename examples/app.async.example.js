@@ -10,7 +10,7 @@ const { cloneDeep } = require('lodash')
 const options = {
     asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
     strictMode: true, // make sure jobs of the same uid cannot be called again!
-    onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+    onlyCompleteSet: true, // `resolution` will only return dataSets marked `complete`
     batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call

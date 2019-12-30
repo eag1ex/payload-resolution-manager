@@ -25,12 +25,24 @@ module.exports = (notify) => {
             this.strictMode = opts.strictMode || null // makes sure that same jobs cannot be called again
             this.batch = opts.batch || null
             this.resSelf = opts.resSelf || null // if true resolution will return self instead of value
-            this.onlyComplete = opts.onlyComplete || null // when set resolution will only resolve items that are marked as complete
-            // when using batch onlyComplete is reset, because we complete each job once a batch of jobs is all complete
+            /*
+            NOTE
+            `resolution` and `batchReady` is fulfilled if all dataSets marked `complete`, this option is more stricted as if does not reset variable scope if not completed as opose to `onlyCompleteSet`
+            */
+            this.onlyCompleteJob = opts.onlyCompleteJob || null
+
+            // NOTE when set resolution will only resolve items that are marked as complete
+            this.onlyCompleteSet = opts.onlyCompleteSet || null
+            // when using batch onlyCompleteSet is reset, because we complete each job once a batch of jobs is all complete
             this.autoComplete = opts.autoComplete || null // when set after performing compute for `each` every item iteration will automaticly be set with `complete`, when not set, you have to apply it each time inside every compute callback
 
             // when piping we cannot chain `resolution(..)` method
             if (this.asAsync) this.resSelf = null
+
+            // NOTE onlyCompleteJob supress onlyCompleteSet
+            if (this.onlyCompleteJob) {
+                this.onlyCompleteSet = null
+            }
 
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
@@ -1279,9 +1291,9 @@ module.exports = (notify) => {
                 }
                 if (!isArray(itemDataSets)) throw ('provided itemDataSets must be an array!')
                 if (yourData) {
-                    // if provided your own source just make sure we set it to compelete
+                    // if provided your own source just make sure we set it to compelete, except for `onlyCompleteJob`
                     itemDataSets.forEach((job, inx) => {
-                        job.complete = true
+                        if (!this.onlyCompleteJob) job.complete = true
                     })
                 }
                 fData = [].concat(perDataSet(itemDataSets, uid), fData)
@@ -1289,14 +1301,13 @@ module.exports = (notify) => {
 
             if (!this.resIndex[uid]) {
                 if (this.debug) notify.ulog({ message: '[resolution] uid provided did not match resIndex' }, true)
-                this.reset(uid)
-
+                if (!this.onlyCompleteJob) this.reset(uid)
                 return returnAS(null)
             }
             if (!fData.length) {
-                if (doDelete) this.delSet(uid)
+                if (doDelete && !this.onlyCompleteJob) this.delSet(uid)
                 if (this.debug) notify.ulog({ message: '[resolution] fData[] no results' }, true)
-                this.reset(uid)
+                if (!this.onlyCompleteJob) this.reset(uid)
                 return returnAS([])
             }
             // NOTE
@@ -1313,55 +1324,62 @@ module.exports = (notify) => {
                 if (verify[ri] !== undefined) verify[ri] = true
             }
 
-            var output = []
+            var resolutionOutput = []
             var verify_index = Object.keys(verify).filter(z => verify[z] === true)
 
             if (verify_index.length === Object.keys(verify).length) {
                 // update lastItem in our format
                 this._lastItemData = fData
+                resolutionOutput = this.resolutionType(uid, fData, deleteType => {
+                    this.delSet(uid)
+                    if (this.debug) notify.ulog(deleteType)
+                }, doDelete)
+                // for (var n = 0; n < fData.length; n++) {
+                //     var item = this.purgeEmpty(fData[n])
+                //     // check if item is an object of arrays
+                //     if (isObject(item) && !isArray(item)) {
+                //         // NOTE if set resolution will only take to accout all dataSets that are marked as `complete`
+                //         if (this.onlyCompleteSet === true) {
+                //             if (item.complete === true && item !== undefined) {
+                //                 if (item.error !== undefined) {
+                //                     output.push({ dataSet: item.dataSet, error: item.error })
+                //                 } else output.push(item.dataSet)
+                //             }
+                //             continue
+                //         } else {
+                //             if (item.dataSet !== undefined && !this.onlyCompleteSet) {
+                //                 output.push(item.dataSet)
+                //             }
+                //             if (item.error !== undefined && !this.onlyCompleteSet) output.push({ dataSet: item.dataSet, error: item.error })
+                //         }
+                //     }
+                // }
 
-                for (var n = 0; n < fData.length; n++) {
-                    var item = this.purgeEmpty(fData[n])
-                    // check if item is an object of arrays
-                    if (isObject(item) && !isArray(item)) {
-                        // NOTE if set resolution will only take to accout all dataSets that are marked as `complete`
-                        if (this.onlyComplete === true) {
-                            if (item.complete === true && item !== undefined) {
-                                if (item.error !== undefined) {
-                                    output.push({ dataSet: item.dataSet, error: item.error })
-                                } else output.push(item.dataSet)
-                            }
-                            continue
-                        } else {
-                            if (item.dataSet !== undefined && !this.onlyComplete) {
-                                output.push(item.dataSet)
-                            }
-                            if (item.error !== undefined && !this.onlyComplete) output.push({ dataSet: item.dataSet, error: item.error })
-                        }
-                    }
-                }
-
-                var assesmentComleted = this.dataAssesment(uid, fData)
-                if (assesmentComleted) {
-                    // NOTE
-                    // in case we marked `onlyComplete` as an option, but data still exists and not completed
-                    // so do not delete
-                    if (!isEmpty(output)) {
-                        this.delSet(uid)
-                    }
-                } else if (doDelete) {
-                    // NOTE per above note
-                    if (!isEmpty(output)) {
-                        this.delSet(uid)
-                    }
-                }
+                // var assesmentComleted = this.dataAssesment(uid, fData)
+                // if (assesmentComleted) {
+                //     // NOTE
+                //     // in case we marked `onlyCompleteSet` as an option, but data still exists and not completed
+                //     // so do not delete
+                //     if (!isEmpty(output)) {
+                //         this.delSet(uid)
+                //     }
+                // } else if (doDelete) {
+                //     // NOTE per above note
+                //     if (!isEmpty(output)) {
+                //         this.delSet(uid)
+                //     }
+                // }
 
                 /**
-                 * when `onlyComplete` is set it will only collect job completed items
-                 * when `batch` is set each batch item will be stored in `batchDataArch`
+                 * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect job completed items
+                 * when `batch`  is set, and data available (except for default), each batch item will be stored in `batchDataArch`
                  */
-                if (this.batch && !isEmpty(output)) {
-                    this.batchDataArch[uid] = [].concat(output, this.batchDataArch[uid])
+                const resolutionOK = resolutionOutput.selected === 'default' ||
+                       (resolutionOutput.selected === 'onlyCompleteJob' && !isEmpty(resolutionOutput.output)) ||
+                       (resolutionOutput.selected === 'onlyCompleteSet' && !isEmpty(resolutionOutput.output))
+
+                if (this.batch && resolutionOK) {
+                    this.batchDataArch[uid] = [].concat(resolutionOutput.output, this.batchDataArch[uid])
                     this.batchDataArch[uid] = this.batchDataArch[uid].filter(z => z !== undefined)
                     // make sure it calls after anything
                     setTimeout(() => {
@@ -1370,17 +1388,17 @@ module.exports = (notify) => {
                 }
 
                 // all good
-                this.reset(uid)
+                if (resolutionOK) this.reset(uid)
                 /// in `strictMode` add last completed job to history so it is not allowed to call same uid again
                 if (this.strictMode === true) {
                     if (this.jobUID_history[uid] === false) this.jobUID_history[uid] = true
                 }
-                return returnAS(output)
+                return returnAS(resolutionOutput.output)
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)
                 notify.ulog({ message: '[resolution] falied to match resIndex', failed_index, uid })
-                if (doDelete) this.delSet(uid)
-                this.reset(uid)
+                if (doDelete && !this.onlyCompleteJob) this.delSet(uid)
+                if (!this.onlyCompleteJob) this.reset(uid)
                 return returnAS(null)
             }
         }
@@ -1438,7 +1456,7 @@ module.exports = (notify) => {
             }
             this.dataArchSealed[uid] = true
 
-            if (this.autoComplete || this.onlyComplete) {
+            if (this.autoComplete || this.onlyCompleteSet) {
                 this.dataArch[uid].forEach((job, inx) => {
                     job.complete = true
                 })
@@ -1563,6 +1581,8 @@ module.exports = (notify) => {
                 if (!v.hasOwnProperty(uid)) continue
                 var job = v[uid]
                 var n = this.loopAssingMod(job)
+
+                // TODO add on dataSet update/change callback, to notify on any data changes, so we know when data is set 'complete'
                 if (n) v[uid] = n
             }
 
