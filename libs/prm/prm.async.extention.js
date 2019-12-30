@@ -66,7 +66,7 @@ module.exports = (PRM, notify) => {
             if (this.asAsync) {
                 if (this.debug) notify.ulog(`[from] [notice] no support for from() with asAsync option, nothig done`)
                 return this
-            } else super.from(RI)
+            } else return super.from(RI)
         }
 
         of(UID, pipe = true) {
@@ -80,12 +80,13 @@ module.exports = (PRM, notify) => {
 
             return this
         }
+
         compute(cb, method = 'all', uid, pipe = true) {
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
             if (!this.asAsync) return super.computeB(cb, method, uid)
             if (!pipe) return super.computeB(cb, method, uid)
 
-            if (!uid) uid = this.lastUID
-            else this.lastUID = uid
             this.valUID(uid)
 
             setTimeout(() => {

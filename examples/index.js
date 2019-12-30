@@ -4,7 +4,13 @@
 const notify = require('../libs/notifications')()
 const PayloadResolutioManager = require('../libs/prm/payload.resolution.manager')(notify)
 var debug = true
-const resx = new PayloadResolutioManager(debug,{ autoComplete: true, batch:true })
+const resx = new PayloadResolutioManager(debug,{
+    strictMode: true, // make sure jobs of the same uid cannot be called again!
+   // onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+   // batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
+   resSelf: true, // allow chaning multiple resolution
+    autoComplete: true // auto set complete on every compute iteration within `each` call
+})
 
 var exampleData = (id = 0) => {
     var data = {
@@ -22,8 +28,8 @@ var exampleData = (id = 0) => {
 
 notify.ulog(`uncomment each example to see the output in console`)
 
-const job_1 = require('./job_1')(resx,exampleData,notify)
-notify.ulog({ job_1 })
+const job_2 = require('./job_2')(resx,exampleData,notify)
+notify.ulog({ job_2 })
 
 // const job_2 = require('./job_2')(resx,exampleData,notify)
 // notify.ulog({ job_2 })

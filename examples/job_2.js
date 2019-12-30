@@ -12,7 +12,6 @@ module.exports = (PRM, exampleData, notify) => {
         .set(d3) // add
 
     // we update only 3 items
-
     var nn2 = PRM.compute(item => { // compute so far
         /**
          * NOTE
@@ -21,7 +20,7 @@ module.exports = (PRM, exampleData, notify) => {
          *  Now we know what each itemDataSet is.. On `each` callback we can make further changes, whala!
          *  resx.itemDataSet = nn.d
          */
-        PRM.itemDataSet = nn.d.slice(0, 3)
+        PRM.itemDataSet = nn.d// .slice(0, 3)
         // NOTE do some calculation for `each` item, must return 1 item
 
         item.dataSet.age += 30
@@ -31,12 +30,13 @@ module.exports = (PRM, exampleData, notify) => {
         if (item._ri === 0) {
             item.dataSet.status = 'single'
         }
-        item.complete = true
+        // item.complete = true
+        console.log('compute!!!')
         return item
     }, 'each') // anonymous uid, check `itemDataSet` first!
-        .markDone(/* uid */) // will ignore set for uid:job_2 from future updates
-        .set(d4)
-        .resolution()
+    //  .markDone(/* uid */) // will ignore set for uid:job_2 from future updates
+        // .set(d4)
+        .resolution().d
 
     /**
          * returns

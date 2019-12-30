@@ -515,7 +515,8 @@ module.exports = (notify) => {
             }
 
             var loopEach = async(skipINX) => {
-                var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
+                // NOTE when setting manual itemDataSet input, need to check for it first!
+                var initialData = (/* this.grab_ref[uid] */ this.itemDataSet || originalFormat) || []
 
                 if (!isEmpty(this.itemDataSet) && isArray(this.itemDataSet)) {
                     if (this.itemDataSet.length !== originalFormat.length) {
@@ -793,7 +794,8 @@ module.exports = (notify) => {
             }
 
             var loopEach = (skipINX) => {
-                var initialData = (/* this.grab_ref[uid] */ originalFormat || this.itemDataSet) || []
+                // NOTE when setting manual itemDataSet input, need to check for it first!
+                var initialData = (/* this.grab_ref[uid] */ this.itemDataSet || originalFormat) || []
 
                 if (!isEmpty(this.itemDataSet) && isArray(this.itemDataSet)) {
                     if (this.itemDataSet.length !== originalFormat.length) {
@@ -845,8 +847,8 @@ module.exports = (notify) => {
                             i = i + 1
                             loop(i)
                         }
-
-                        perLoop(z)
+                        var u = cb_sandbox(z, skipINX)
+                        perLoop(u)
                     } else {
                         loopd = loopd.filter(z => z !== undefined)
                     }
@@ -918,6 +920,16 @@ module.exports = (notify) => {
         }
 
         computeFinalize(uid, updateData) {
+            // if (!uid && !isEmpty(updateData)) {
+            //     // NOTE if passing anonymouse uid find if from updateData
+            //     var uids = []
+            //     updateData.forEach((job, inx) => {
+            //         uids.push(job._uid)
+            //     })
+            //     // should return uniq 1 job id
+            //     uid = uniq(uids).toString()
+            // }
+
             if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
 
             if ((updateData || []).length) {
@@ -929,7 +941,7 @@ module.exports = (notify) => {
                         continue
                     }
 
-                    var _uid = uid === false ? updItem._uid : uid
+                    var _uid = !uid ? updItem._uid : uid
                     if (!this.dataArch[_uid]) continue
                     var itmPosIndex = updItem._ri
                     if (this.dataArch[_uid][itmPosIndex]) {
@@ -1480,7 +1492,6 @@ module.exports = (notify) => {
                         dataReduced.push(job)
                     }
                 }
-                console.log('this._fromRI', this._fromRI, dataReduced, dataArch_copy)
                 dataArch_copy = dataReduced
             }
 

@@ -29,7 +29,6 @@ var d = prm.set(d1, job50)
     .set(d3)
     .from(3) // will only make computes starting from(number)  < `_ri` index
     .compute(item => {
-        console.log('each cpmpute', item)
         // if (item._ri === 3) {
         //  item._uid = '10000_error' // protected cannot be changed
         //  item._ri = '-50'  // protected cannot be changed
