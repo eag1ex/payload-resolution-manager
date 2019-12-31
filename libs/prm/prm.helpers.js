@@ -9,6 +9,24 @@ module.exports = (notify, PayloadResolutioManager) => {
     class PRMHelpers extends PayloadResolutioManager {
         constructor(debug, opts) {
             super(debug, opts)
+            this._PrmProto = null
+        }
+
+        get PrmProto() {
+            if (this._PrmProto) return this._PrmProto
+            this._PrmProto = new PrmProto(this.debug)
+            return this._PrmProto
+        }
+
+        /**
+         * @onUpdate
+         * needs to be initiated first with `PrmProto`, listen for PromProto changes of each jobs uid dataSet
+         * - method extention of `PrmProto.modelStateChange` class
+         * cb: cb(uid, PrmProto)
+         */
+        onUpdate(cb) {
+            this.PrmProto.modelStateChange(cb)
+            return this
         }
         /**
          * @assingMod
@@ -18,14 +36,23 @@ module.exports = (notify, PayloadResolutioManager) => {
          * `strip`: strip prototype from model
          */
         assingMod(dataSetItem, config = {}, strip = null, lock = null) {
+            /**
+             * IMPORTANT FACTS
+             * due to not reinitiating new instance class of `PrmProto` to save memory.
+             * we need to clone each assignment to be anonymous, because we are resetting `modelBase` each time `assign` is called.
+             *
+             * NOTE
+             * - If it werent cloned, reset would remove all PrmProto data's belonging to each item.
+             * - so now we can reuse the class for other purpose like event callback on data change!
+             */
             var isInstance = dataSetItem instanceof PrmProto
             if (!isEmpty(config)) {
-                return new PrmProto(this.debug).assign(dataSetItem, config, strip, lock)
+                return cloneDeep(this.PrmProto.assign(dataSetItem, config, strip, lock))
             } else {
-                if (strip) return new PrmProto(this.debug).assign(dataSetItem, null, strip)
+                if (strip) return cloneDeep(this.PrmProto.assign(dataSetItem, null, strip))
                 else {
                     if (isInstance) return dataSetItem
-                    else return new PrmProto(this.debug).assign(dataSetItem, null, null, lock)
+                    else return cloneDeep(this.PrmProto.assign(dataSetItem, null, null, lock))
                 }
             }
         }
@@ -116,7 +143,6 @@ module.exports = (notify, PayloadResolutioManager) => {
         loopAssingMod(jobArr, config, lock) {
             if (!isArray(jobArr)) return null
             var total = jobArr.length
-
             var modsArr = []
             for (var i = 0; i < jobArr.length; i++) {
                 var d
@@ -124,8 +150,9 @@ module.exports = (notify, PayloadResolutioManager) => {
                 if (!isEmpty(config)) {
                     d = this.assingMod(jobArr[i], config, null, lock)
                 } else {
-                    if (!isInstance) d = this.assingMod(jobArr[i], null, null, lock)
-                    else d = jobArr[i]
+                    if (!isInstance) {
+                        d = this.assingMod(jobArr[i], null, null, lock)
+                    } else d = jobArr[i]
                 }
                 modsArr.push(d)
             }
