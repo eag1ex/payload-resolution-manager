@@ -20,6 +20,9 @@ module.exports = (notify) => {
             this.optConfig(opts)
             // end
 
+            // count calls to resolution method, only when data is available regrdless if complete or not
+            this.resolutionINDEX = {/** uid:index */}
+            this.resolutionINDEX_cb = {/** uid:cb */}
             // resolution index
             this._resIndex = {
                 // [uid]:[]< payload size each number is data set, must be uniq
@@ -497,94 +500,6 @@ module.exports = (notify) => {
         }
 
         /**
-         * @batchReady
-         * collect each completed job that belongs to a batch and return if all jobs are complete
-         * after batch is returned only batch listed jobs are deleted from batchDataArch
-         * `jobUIDS` specify jobUID's being worked on
-         * `type` : can return as `flat` array or `grouped` object
-         * `doneCB` : when set will will run setInterval to check when bach is ready then return callback
-         */
-        batchReady(jobUIDS = [], type = 'flat', doneCB = null) {
-            if (!this.batch) return null
-            if (!isArray(jobUIDS)) return null
-            if (!jobUIDS.length) return null
-
-            if (!type) type = 'flat' // set default
-
-            // must also be valid
-            for (var i = 0; i < jobUIDS.length; i++) {
-                this.valUID(jobUIDS[i])
-            }
-
-            var performResolution = () => {
-                var batchedJobs
-
-                // check if batch is set first
-                var batchSet = Object.keys(this.batchDataArch).filter(z => {
-                    return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
-                }).length === jobUIDS.length
-
-                if (!batchSet) return null
-
-                if (type === 'flat') {
-                    batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
-                        if (indexOf(jobUIDS, k) !== -1) n = [].concat(el, n)
-                        return n
-                    }, []).filter(z => z !== undefined)
-
-                    batchedJobs = flatMap(batchedJobs)
-                }
-
-                if (type === 'grouped') {
-                    batchedJobs = reduce(cloneDeep(this.batchDataArch), (n, el, k) => {
-                        if (indexOf(jobUIDS, k) !== -1) {
-                            n[k] = [].concat(el, n[k])
-                            n[k] = n[k].filter(z => z !== undefined)
-                        }
-                        return n
-                    }, {})
-                }
-
-                // purge
-                for (var k in this.batchDataArch) {
-                    if (indexOf(jobUIDS, k) !== -1 && this.batchDataArch[k]) {
-                        delete this.batchDataArch[k]
-                        // console.log(`purged batchDataArch for uid ${k}`)
-                    }
-                }
-
-                return batchedJobs
-            }
-
-            //
-            if (typeof doneCB === 'function') {
-                this.batchCBDone(jobUIDS, (pass) => {
-                    if (!pass) return
-                    var r = performResolution()
-                    if (r === null) return
-                    doneCB(r)
-                    // NOTE delete all cached data for this job
-                    times(jobUIDS.length, (inx) => {
-                        this.delSet(jobUIDS[inx], true)
-                    })
-                })
-
-                return null
-            } else {
-                var ready = performResolution()
-
-                if (!isEmpty(ready)) {
-                    // NOTE delete all cached data for this job
-                    times(jobUIDS.length, (inx) => {
-                        this.delSet(jobUIDS[inx], true)
-                    })
-                }
-                // notify.ulog({ message: 'batchedJobs results', jobUIDS, batchedJobs: batchedJobs })
-                return ready
-            }
-        }
-
-        /**
          * @_resolution_item
          * mothod called by resolution, to allow grouping calls
          */
@@ -695,41 +610,6 @@ module.exports = (notify) => {
                     this.delSet(uid)
                     if (this.debug) notify.ulog(deleteType)
                 }, doDelete)
-                // for (var n = 0; n < fData.length; n++) {
-                //     var item = this.purgeEmpty(fData[n])
-                //     // check if item is an object of arrays
-                //     if (isObject(item) && !isArray(item)) {
-                //         // NOTE if set resolution will only take to accout all dataSets that are marked as `complete`
-                //         if (this.onlyCompleteSet === true) {
-                //             if (item.complete === true && item !== undefined) {
-                //                 if (item.error !== undefined) {
-                //                     output.push({ dataSet: item.dataSet, error: item.error })
-                //                 } else output.push(item.dataSet)
-                //             }
-                //             continue
-                //         } else {
-                //             if (item.dataSet !== undefined && !this.onlyCompleteSet) {
-                //                 output.push(item.dataSet)
-                //             }
-                //             if (item.error !== undefined && !this.onlyCompleteSet) output.push({ dataSet: item.dataSet, error: item.error })
-                //         }
-                //     }
-                // }
-
-                // var assesmentComleted = this.dataAssesment(uid, fData)
-                // if (assesmentComleted) {
-                //     // NOTE
-                //     // in case we marked `onlyCompleteSet` as an option, but data still exists and not completed
-                //     // so do not delete
-                //     if (!isEmpty(output)) {
-                //         this.delSet(uid)
-                //     }
-                // } else if (doDelete) {
-                //     // NOTE per above note
-                //     if (!isEmpty(output)) {
-                //         this.delSet(uid)
-                //     }
-                // }
 
                 /**
                  * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect job completed items
@@ -742,16 +622,26 @@ module.exports = (notify) => {
                 if (this.batch && resolutionOK) {
                     this.batchDataArch[uid] = [].concat(resolutionOutput.output, this.batchDataArch[uid])
                     this.batchDataArch[uid] = this.batchDataArch[uid].filter(z => z !== undefined)
+
                     // make sure it calls after anything
                     setTimeout(() => {
                         this.batchCB(uid) // set
+                        // NOTE when invoking this we make sure that `batchDataArch` is already set!
+                        if (typeof this.resolutionINDEX_cb[uid] === 'function') {
+                            this.resolutionINDEX_cb[uid]('resolution batch ready')
+                        }
                     }, 100)
                 }
+
+                // NOTE increment how many times resolution is called for each job
+                // used with lazy PrmProto callback when complete, so batchReady can make final call
+                this.incrementResolutionCalls(uid)
 
                 // all good
                 if (resolutionOK) this.reset(uid)
                 /// in `strictMode` add last completed job to history so it is not allowed to call same uid again
-                if (this.strictMode === true) {
+                // but when `onlyCompleteJob` is set this condition is enabled from `batchReady` method
+                if (this.strictMode === true && !this.onlyCompleteJob) {
                     if (this.jobUID_history[uid] === false) this.jobUID_history[uid] = true
                 }
                 return returnAS(resolutionOutput.output)
@@ -1193,7 +1083,8 @@ module.exports = (notify) => {
     }
     const PRMcompute = require('./prm.compute')(notify, PayloadResolutioManager)
     const PRMHelpers = require('./prm.helpers')(notify, PRMcompute)
-    const prmAsync = require('./prm.async.extention')(PRMHelpers, notify)
+    const PRMbatchReady = require('./prm.batchReady')(notify, PRMHelpers)
+    const prmAsync = require('./prm.async.extention')(PRMbatchReady, notify)
     class PRMext extends prmAsync {
         constructor(debug, opts) {
             super(debug, opts)

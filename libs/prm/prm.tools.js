@@ -132,6 +132,28 @@ module.exports = (notify, BatchCallbacks) => {
         }
 
         /**
+         * @completed
+         * mark job data as complete for all dataSets
+         * @param {*} uid
+         *
+         */
+        completed(uid) {
+            if (uid) this.lastUID = uid
+            else uid = this.lastUID
+            this.valUID(uid)
+            if (!this.dataArch[uid]) {
+                return this
+            }
+            this.dataArch[uid].forEach(element => {
+                element.complete = true
+            })
+
+            this.dataArch = Object.assign({}, this.dataArch)
+
+            return this
+        }
+
+        /**
          * @tap
          * does not make any alterations, just taps in to last data changes, so you can view them
         */

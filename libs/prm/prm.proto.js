@@ -5,7 +5,7 @@
 */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isNumber, isObject, isArray, omit, isString } = require('lodash')
+    const { isEmpty, isNumber, isObject, isArray, omit, isString, cloneDeep } = require('lodash')
 
     class PrmProto {
         constructor(debug) {
@@ -89,14 +89,15 @@ module.exports = (notify) => {
                         },
                         set: function(val) {
                             if (self[`_modelBase`][_prop] === undefined) self[`_modelBase`][_prop] = null
-                            //  self[`_modelBase`][_prop] = val
+
                             var updated = null
+                            const mm = self[`_modelBase`][_prop]
 
                             // NOTE `_uid` and `_ri` can only be set once!
                             if (prop === '_uid' || prop === '_ri') {
-                                if (isEmpty(self[`_modelBase`][_prop]) &&
-                                    !isNumber(self[`_modelBase`][_prop]) &&
-                                    !isString(self[`_modelBase`][_prop])) {
+                                if (isEmpty(mm) &&
+                                    !isNumber(mm) &&
+                                    !isString(mm)) {
                                     self[`_modelBase`][_prop] = val
                                     updated = true
                                 } else {
@@ -108,11 +109,16 @@ module.exports = (notify) => {
                             }
 
                             if (updated) {
-                                // if (self.debug) notify.ulog({ message: 'new value set', prop: _prop, value: val })
                                 if (typeof self.modelStateChange_CB === 'function') {
+                                    const m = cloneDeep(self[`_modelBase`])
+                                    const readySet = m.dataSet !== undefined &&
+                                                        m._uid !== undefined &&
+                                                        m._ri !== undefined &&
+                                                        m._timestamp !== undefined
+
                                     // NOTE only initiate callback when `dataSet` already exists
-                                    if (self[`_modelBase`].dataSet !== undefined) {
-                                        self.modelStateChange_CB(self[`_modelBase`]._uid, self[`_modelBase`])
+                                    if (readySet) {
+                                        self.modelStateChange_CB(m._uid, m)
                                     }
                                 }
                             }
@@ -131,24 +137,24 @@ module.exports = (notify) => {
          *  each time `createAndModel` is called, it will assing new data and on update callback
          * we want to make sure that `_uid` is assign first!
          */
-        reorderDataSets(dataSets) {
-            var modArr = []
-            for (var prop in dataSets) {
-                modArr.push({ prop, data: dataSets[prop] })
-            }
-            var reorderArr = []
-            var temp
-            for (var i = 0; i < modArr.length; i++) {
-                if (modArr[i].prop === '_uid') temp = modArr[i]
-                if (modArr[i].prop !== '_uid') reorderArr.push(modArr[i])
-                // add uid at the end
+        // reorderDataSets(dataSets) {
+        //     var modArr = []
+        //     for (var prop in dataSets) {
+        //         modArr.push({ prop, data: dataSets[prop] })
+        //     }
+        //     var reorderArr = []
+        //     var temp
+        //     for (var i = 0; i < modArr.length; i++) {
+        //         if (modArr[i].prop === '_uid') temp = modArr[i]
+        //         if (modArr[i].prop !== '_uid') reorderArr.push(modArr[i])
+        //         // add uid at the end
 
-                if (modArr.length - 1 === i) {
-                    reorderArr.unshift(temp)
-                }
-            }
-            return reorderArr
-        }
+        //         if (modArr.length - 1 === i) {
+        //             reorderArr.unshift(temp)
+        //         }
+        //     }
+        //     return reorderArr
+        // }
         assign(dataSetItem, conf = null, strip = null, lock = null) {
             var defaults = { enumerable: true, writable: false, configurable: false }
             if (isEmpty(conf)) conf = defaults
@@ -169,12 +175,16 @@ module.exports = (notify) => {
             }
 
             var createMod = (_strip) => {
-                var reorderArr = this.reorderDataSets(dataSetItem)
-                for (var n = 0; n < reorderArr.length; n++) {
-                    var item = reorderArr[n]
-                    // NOTE will assing modelBase proto
-                    this.createAndModel(item.prop, conf, _strip)[item.prop] = item.data
+                // var reorderArr = this.reorderDataSets(dataSetItem)
+                for (var prop in dataSetItem) {
+                    this.createAndModel(prop, conf, _strip)[prop] = dataSetItem[prop]
                 }
+
+                // for (var n = 0; n < reorderArr.length; n++) {
+                //     var item = reorderArr[n]
+                //     // NOTE will assing modelBase proto
+                //     this.createAndModel(item.prop, conf, _strip)[item.prop] = item.data
+                // }
 
                 return this.modelBase
 

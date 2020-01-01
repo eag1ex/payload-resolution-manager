@@ -36,10 +36,10 @@ const examplesINIT = () => {
     // notify.ulog({ job_3 })
     notify.ulog({ job_2 })
 } // examplesINIT
-    // examplesINIT()
+    examplesINIT()
 
 
-const completionExample = require('./app.completion.example')
+//const completionExample = require('./app.completion.example')
 
 
 

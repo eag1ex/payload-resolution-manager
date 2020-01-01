@@ -139,6 +139,14 @@ prm.batchReady([job50, job60, job70], 'flat', d => {
 * `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 
+* PRM `opt` settings:
+    - `onlyCompleteJob`: this feture becomes usefull if you only want to return data marked as `complete`, job data will exist untill all job items are complete, and then they will be removed. 
+    - `onlyCompleteSet` : similar to `onlyCompleteJob`, except only any items marked complete will be returned, else will be discarted
+    - `autoComplete`: marks each job dataSet [1,2] (each item in set) as complete when using `compute(...)` mwthod to porform data updates and changes
+    - `batch`: enables functionulity to use `batchReady(..)`
+    - `resSelf`: enable chaining resolution() again and again: `resolution().set(..).resolution(..)` to check when data is ready > only then the data gets removed from class instance.
+    - `strictMode` : same job uid cannot be called more then once
+
 * `markDone(uid:String)`: Provide after any `set`, and will make sure no other changes are allowed to this job - any subsequent calls will be ignored.
 
 * `updateDataSet(uid,_ri, newDataSet,type)` : update job, targted via `_ri` together with `uid` 
