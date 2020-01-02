@@ -399,8 +399,22 @@ module.exports = (notify, PayloadResolutioManager) => {
          * - validate uid make sure is good
          */
         valUID(uid, ignore = null) {
+            /**
+             * possible error triggers
+             * * running compute() after resolution() already set with the setting `onlyCompleteSet`
+             *  - this means job already complete and all data was cleared, so compute() will not know your setting
+             */
+
             if (ignore) return this
-            if (!uid) throw ('must provide uid!')
+            if (!uid) {
+                if (isEmpty(this.dataArch) && (this.onlyCompleteSet || this.onlyCompleteJob)) {
+                    if (this.debug) {
+                        notify.ulog(`possibly you called method without setting uid, or you already called resolution(), so job data was completed and cleared. This may happen with {onlyCompleteSet} or {onlyCompleteJob} being set`)
+                    }
+                }
+
+                throw ('must provide uid!')
+            }
             if (!isString(uid)) throw ('uid must be a string')
             if (uid.length < 2) throw ('uid must be longer then 1')
             if (uid.split(' ').length > 1) throw ('uid cannot have any empty space!')

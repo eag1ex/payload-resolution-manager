@@ -39,16 +39,16 @@ var d = prm.set(d1, job50)
     .set(d3, job60)
 
 // .of(job50) // of what job
-    // .from(0) // from what `_ri` index
-    // .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
-    //     return v.dataSet.age < 30
-    // })
-    // .compute(item => {
-    // // make more changes to job_50, starting from `_ri` index
-    //     return item
-    // }, 'each')
-    .completed()
-    .resolution().d
+// .from(0) // from what `_ri` index
+// .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
+//     return v.dataSet.age < 30
+// })
+// .compute(item => {
+// // make more changes to job_50, starting from `_ri` index
+//     return item
+// }, 'each')
+//  .completed()
+    .resolution()
 //
 
 // notify.ulog({ job60: d })
@@ -56,7 +56,7 @@ var d = prm.set(d1, job50)
 // TODO
 // onlyCompleteSet doesnt work as excepted with the batch, works fine with resolution,
 
-prm.batchReady([job50, job60], 'flat', d => {
+prm.batchReady([job50, job60], 'grouped', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
     // NOTE PRM instance cache should be now be cleared/reset
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })

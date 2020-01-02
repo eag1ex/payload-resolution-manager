@@ -48,6 +48,14 @@ module.exports = (notify, PRM) => {
 
                 // check if batch is set first
                 var batchSet = Object.keys(this.batchDataArch).filter(z => {
+                    if (this.onlyCompleteJob) {
+                        return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
+                    }
+                    if (this.onlyCompleteSet) {
+                        // at least we know that resolution did pass, and doesnt matter if empty or not
+                        return indexOf(jobUIDS, z) !== -1 && this.batchDataArch[z] !== undefined
+                    }
+
                     return indexOf(jobUIDS, z) !== -1 && !isEmpty(this.batchDataArch[z])
                 }).length === jobUIDS.length
 
@@ -83,6 +91,7 @@ module.exports = (notify, PRM) => {
 
                 const exitWithCB = () => {
                     var r = performResolution()
+
                     if (r === null) return
                     doneCB(r)
                     alreadyDone = true
