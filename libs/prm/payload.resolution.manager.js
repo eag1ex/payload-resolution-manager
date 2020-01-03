@@ -76,7 +76,7 @@ module.exports = (notify) => {
             if (this.asAsync) this.resSelf = null
 
             // NOTE onlyCompleteJob supress onlyCompleteSet
-            if (this.onlyCompleteJob) {
+            if (this.onlyCompleteJob || (this.onlyCompleteJob && this.onlyCompleteSet)) {
                 this.onlyCompleteSet = null
             }
         }

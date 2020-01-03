@@ -1,15 +1,15 @@
 
 /**
- * Application, advance chaining example
- * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
- * using `batchReady`
+ * Application, advance chaining, completion example
+ * for example you have delayed job process, it is not async, but you only want jobs in que marked complete to return in final `batchReady` call.
  */
 const notify = require('../libs/notifications')()
 const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
 const options = {
     strictMode: true, // make sure jobs of same uid cannot be called again!
-    onlyCompleteSet: true, // `resolution` will only return dataSets marked `complete`
+    onlyCompleteSet: true, // (this)`resolution` will only return dataSets marked `complete`
+    // onlyCompleteJob: true, // (or this)  `resolution` will only complete whole job marked complete
     batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
@@ -26,48 +26,44 @@ var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', 
 // prm.onUpdate((uid, model) => {
 //     notify.ulog({ uid, model })
 // })
-var d = prm.set(d1, job50)
+prm.set(d1, job50)
     .set(d2)
-// .from(3) // will only make computes starting from(number)  < `_ri` index
     .compute(item => {
         item.dataSet.age = 70
         item.dataSet.occupation = 'retired'
+        // item.complete = true // NOTE  `autoComplete` is not set you must mark it your self
         return item
     }, 'each')
-// .set(d3)
     .resolution()
     .set(d3, job60)
 
 // .of(job50) // of what job
 // .from(0) // from what `_ri` index
-// .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
-//     return v.dataSet.age < 30
-// })
-// .compute(item => {
-// // make more changes to job_50, starting from `_ri` index
-//     return item
-// }, 'each')
-//  .completed()
-    .resolution()
-//
 
-// notify.ulog({ job60: d })
+    .filter((v, index) => { // filtered results for compute to manage, leaving rest unchanged
+        return v.dataSet.age < 36
+    })
 
-// TODO
-// onlyCompleteSet doesnt work as excepted with the batch, works fine with resolution,
+// .completed(/**uid*/) // mark job as `complete`
+// .resolution()
 
+setTimeout(() => {
+    prm.of(job60).compute(item => {
+        item.dataSet.occupation = 'senior'
+        return item
+    }, 'each')
+        .markDone()
+        .set(d1)// addition would be ignored, we set it as `markDone`
+        .resolution()
+}, 3000)
+
+/**
+ * @batchReady
+ * is waiting for resolution, then checks if jobs are compelted, and initiates final callback
+ */
 prm.batchReady([job50, job60], 'grouped', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
-    // NOTE PRM instance cache should be now be cleared/reset
-    // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
 })
-
-// setTimeout(() => {
-//     prm.of(job60).compute(item => {
-//         item.dataSet.occupation = 'senior'
-//         return item
-//     }, 'each').resolution()
-// }, 3000)
 
 /// //////////////////////////
 module.export = true
