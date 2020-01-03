@@ -31,7 +31,7 @@ prm.set(d1, job50)
     .compute(item => {
         item.dataSet.age = 70
         item.dataSet.occupation = 'retired'
-        // item.complete = true // NOTE  `autoComplete` is not set you must mark it your self
+        // item.complete = true // NOTE if `autoComplete` is not set you must mark it your self
         return item
     }, 'each')
     .resolution()
