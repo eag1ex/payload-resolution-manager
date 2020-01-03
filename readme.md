@@ -133,7 +133,7 @@ prm.batchReady([job50, job60, job70], 'flat', d => {
 ```
 
 ##### Methodes explained:
-* `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of `PrmProto` instance, props: `_uid, _ri` are protected and cannot be overriten to make sure of consistency and prone errors. Only  `dataSet, _timestamp, complete` props can be changed. 
+* `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of `PrmProto` instance, props: `_uid, _ri` are protected and cannot be overriten to make sure of consistency and prone errors. Only  `dataSet, _timestamp, complete, error` props can be changed. 
 * `uid:String`: Provide uid for every data asset, per job. If not specified, will  try to find last used uid.
 * `data[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()]
 * `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
@@ -153,6 +153,8 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
      - `newDataSet` can be any data, example: {},[],1,true, except for null
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
 * `updateSet(newData,uid)` : provide raw data produced by `set` or use `getSet(uid)` to return it. Will update only dataSet[..], will not grow the items array.
+
+* `completed(uid)` : marks each PrmProto object as `complete`
 
 * `batchReady(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
      - `jobUIDS` :specify working job uids

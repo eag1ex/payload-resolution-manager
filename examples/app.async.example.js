@@ -1,7 +1,7 @@
 /**
  * Application, advance async chaining example with the help of Xpromise & Xpipe
  * Simple demonstration of a bank transaction using async data,
- * With the help of Xpipe we can chain events that will activate each method's once each data is update and piped down.
+ * With the help of Xpipe we can chain events that will run each method once each data is update and piped down.
  */
 
 const notify = require('../libs/notifications')()
