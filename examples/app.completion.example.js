@@ -65,5 +65,17 @@ prm.batchReady([job50, job60], 'grouped', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
 })
 
-/// //////////////////////////
+/**
+ * NOTE batchReady, example return:
+    { job_50:
+      [ { name: 'alex', age: 70, occupation: 'retired' },
+        { name: 'jackie', age: 70, occupation: 'retired' },
+        { name: 'daniel', age: 70, occupation: 'retired' },
+        { name: 'john', age: 70, occupation: 'retired' } ],
+     job_60:
+      [ { name: 'max', age: 44 },
+        { name: 'smith', age: 66 },
+        { name: 'jane', age: 35, occupation: 'senior' } ] },
+ */
+
 module.export = true
