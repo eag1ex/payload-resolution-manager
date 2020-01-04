@@ -38,7 +38,11 @@ const examplesINIT = () => {
 } // examplesINIT
 // examplesINIT()
 
-
+const APP_PROJECT = ()=>{
+    const AppProject = require('./app.project.example/app')()
+    new AppProject(false)
+}
+APP_PROJECT()
 //const completionExample = require('./app.completion.example')
-const asyncExample = require('./app.async.example')
+//const asyncExample = require('./app.async.example')
 //const mixedExample = require('./app.example')

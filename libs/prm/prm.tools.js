@@ -36,20 +36,44 @@ module.exports = (notify, BatchCallbacks) => {
             }
 
             // NOTE why timeout here? Because this `cb` is out of sync with this.xpromise class callabck
-            setTimeout(() => {
+            const timeToWait = 100
+            if (typeof cb === 'function') {
+                //  setTimeout(() => {
                 this.xpromise.pipe((d, err) => {
+                    // console.log('pipe d', d, err)
+                    d = cloneDeep(d)
                     if (err) {
+                        err = cloneDeep(err)
                         notify.ulog({ message: `pipe err`, err: err })
-                        return
                     }
                     // NOTE always return value
                     const _dd = cb(d, err)
                     var d = _dd === undefined ? true : _dd
-                    return d
-                })
-            }, 100)
+                    return d || err
+                }, id)
+                // }, timeToWait)
+                return this
+            } else {
+                return new Promise((resolve, reject) => {
+                    return this.xpromise.pipe(null, id).then(d => {
+                        d = cloneDeep(d)
+                        // NOTE always return value
+                        var dd = d === undefined ? true : d
+                        //    setTimeout(() => {
+                        resolve(dd)
+                        // }, timeToWait)
 
-            return this
+                        return dd
+                    }, err => {
+                        err = cloneDeep(err)
+                        notify.ulog({ message: `pipe err`, err: err })
+                        // setTimeout(() => {
+                        reject(err)
+                        //   }, timeToWait)
+                        return Promise.reject(err)
+                    })
+                })
+            }
         }
 
         /**

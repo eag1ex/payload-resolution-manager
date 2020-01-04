@@ -140,6 +140,7 @@ prm.batchReady([job50, job60, job70], 'flat', d => {
 this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 
 * PRM `opt` settings:
+    - `asAsync`: will use `pipe(cb=>,uid)` strategy, each data is treated as async.
     - `onlyCompleteJob`: this feture becomes usefull if you only want to return data marked as `complete`, job data will exist untill all job items are complete, and then they will be removed. 
     - `onlyCompleteSet` : similar to `onlyCompleteJob`, except only any items marked complete will be returned, else will be discarted
     - `autoComplete`: marks each job dataSet [1,2] (each item in set) as complete when using `compute(...)` mwthod to porform data updates and changes
@@ -174,13 +175,13 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 
 * `formated(data[...], uid, external, clean)` : for some reason you want to make sure your data is correct. Provide job[...] as previously initialized with `set`. Does not update or change any internal class states.
      - `external:boolean` If its an external data that is not yet available in the class, will ignore validation.
-
+* `pipe(cb=>, uid)` : its an extention `from XPromise/Xpipe` more information at : `https://bitbucket.org/eag1ex/xpromise`. To use this feature with PRM you have to set `opts.asAsync=true`, examples avilable at `./examples/app.async.example`
+* `onSet`: works with `async` option enabled and together with `pipe(...)`
 * `delSet(uid, force:true)`:  manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 ###### Beta Tools
 * `of(uid)`: chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` > to start tracking from this job
 * `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`. 
-    - Notice no support for this method when using `async` option at the moment.
 
 ##### Example output:
 ```

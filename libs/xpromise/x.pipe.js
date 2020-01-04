@@ -216,6 +216,9 @@ module.exports = (Xpromise, notify) => {
                             return
                         }
                         try {
+                            // NOTE will call only when `end()` was initiated
+                            this.endPiping(uid)
+
                             var resol = passFailResolution !== null ? passFailResolution : true
 
                             this.callPipeResolution(pipeID, resol, v, uid)

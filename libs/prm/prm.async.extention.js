@@ -12,27 +12,12 @@
 */
 module.exports = (PRM, notify) => {
     if (!notify) notify = require('../notifications')()
-    // const { isString, uniq, reduce, indexOf } = require('lodash')
+    const { cloneDeep, uniq } = require('lodash')
     class PRMasync extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
             this._pipeDelay = 100 // due to computation and callbacks, need an unpresented delay
         }
-
-        // getSet(uid, _self, pipe = true) {
-        //     if (!this.asAsync) return super.getSet(uid, _self)
-        //     if (!pipe) return super.getSet(uid, _self)
-
-        //     if (!uid) uid = this.lastUID
-        //     else this.lastUID = uid
-        //     this.valUID(uid)
-
-        //     this.xpromise.initPipe(uid, true) // only called initially if never set
-        //         .pipe((d) => {
-        //             return super.getSet(uid) // no self when piping
-        //         }, uid)
-        //     return this
-        // }
 
         filter(cb, uid, pipe = true) {
             if (!this.asAsync) return super.filter(cb, uid)
@@ -138,7 +123,7 @@ module.exports = (PRM, notify) => {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
             this.valUID(uid)
-
+            this.jobUID_temp = uid
             this.xpromise.initPipe(uid, true) // only called initially if never set
                 .pipe(async(d) => {
                     var dd = await data
@@ -146,6 +131,42 @@ module.exports = (PRM, notify) => {
                     return this.d
                 }, uid)
 
+            return this
+        }
+        /**
+         * @onSet
+         * wait for all/last jobs to get set and then use PRM tools `pipe` (which gets set after Xpipe does)
+         * pipe all/last take `getUIDS` to loop thru all jobs
+         * `cb` called once all jobs are piped down
+         * `type=all`: will wait until all initial job vals are set
+         * `type=last`: will only wait for last set job and continue
+         *
+         */
+        onSet(cb, type = 'all') {
+            if (!this.asAsync) {
+                if (this.debug) notify.ulog(`[onSet] works with opts.asAsync feature enabled, and together with pipe(..), nothig done`)
+                return this
+            }
+            var uids = this.initialUIDS()
+
+            if (type === 'last') {
+                if (!this.lastUID) return this
+                uids = [this.lastUID]
+            }
+
+            const allData = []
+            uids.forEach((uid, inx) => {
+                this.pipe((d, err) => {
+                    allData.push({ uid: uid, data: cloneDeep(d), error: cloneDeep(err) })
+                    if (inx === uids.length - 1) {
+                        // last one piped
+                        if (typeof cb === 'function') {
+                            cb(allData)
+                            return d || err // pass on original status
+                        }
+                    } else return d || err // pass on original status
+                })
+            })
             return this
         }
 

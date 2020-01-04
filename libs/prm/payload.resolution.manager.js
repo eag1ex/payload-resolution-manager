@@ -20,6 +20,7 @@ module.exports = (notify) => {
             this.optConfig(opts)
             // end
 
+            this._jobUID_temp = []
             // count calls to resolution method, only when data is available regrdless if complete or not
             this.resolutionINDEX = {/** uid:index */}
             this.resolutionINDEX_cb = {/** uid:cb */}
@@ -93,6 +94,30 @@ module.exports = (notify) => {
             return new Date().getTime()
         }
 
+        set jobUID_temp(v) {
+            this._jobUID_temp = [].concat(v, this._jobUID_temp)
+            this._jobUID_temp = uniq(this._jobUID_temp).filter(z => !!z)
+        }
+
+        /**
+         * @jobUID_temp
+         * set quickly without proto iteration
+         */
+        get jobUID_temp() {
+            return this._jobUID_temp
+        }
+
+        /**
+         * @initialUIDS
+         * returns initial then actual uids as they become available in PRM scope
+         */
+        initialUIDS() {
+            const UIDS = cloneDeep(this.getUIDS())
+            this.jobUID_temp = UIDS
+            if ((UIDS || []).length === this.jobUID_temp.length) {
+                return UIDS
+            } else return this.jobUID_temp
+        }
         /**
          * @getUIDS
          * return all uid keys accending, by first data update, or set change
@@ -116,7 +141,7 @@ module.exports = (notify) => {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
             this.valUID(uid)
-
+            this.jobUID_temp = uid
             if (this.dataArchSealed[uid]) {
                 if (this.debug) notify.ulog('[set] data already sealed cannot update', true)
                 return this
@@ -381,6 +406,7 @@ module.exports = (notify) => {
             this.lastUID = null
             this._itemDataSet = null
             this.d = null
+            this._jobUID_temp = this._jobUID_temp.map(z => z.indexOf(uid) === -1)
             return this
         }
 
@@ -983,8 +1009,10 @@ module.exports = (notify) => {
          * `_self`  optional, if set specify `getSet.d` to return items data
          */
         getSet(uid, _self) {
-            this.valUID(uid)
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
 
+            this.valUID(uid)
             this.d = null
 
             // only update if data not sealed
