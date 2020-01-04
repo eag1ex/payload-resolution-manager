@@ -5,7 +5,7 @@
  */
 module.exports = (Xpromise, notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isArray, isEmpty, isObject, isFunction } = require('lodash')
+    const { isArray, isEmpty, isObject, isFunction, reduce } = require('lodash')
 
     if (!Xpromise) Xpromise = function() { } // allow use if xpromise not set
 
@@ -22,6 +22,7 @@ module.exports = (Xpromise, notify) => {
             this._startPipeCBs = {} // called initially via initPipe
             this.pipeUIDindex = {}
             this.pipePassFail = {} // alter resolution of each pipe, to either resolve or reject
+            this.pipeMarkDel = {/** uid:boolean */}// add mark to delete pipe
         }
 
         /**
@@ -34,6 +35,11 @@ module.exports = (Xpromise, notify) => {
          */
         initPipe(uid, firstPipedData = null, resolveReject = true) {
             this.testUID(uid)
+
+            if (this.pipeMarkDel[uid] === 'used') {
+                if (this.debug) notify.ulog(`this uid was already terminated, and cannot be used again`)
+                return this
+            }
 
             // set restriction only if `allowPipe` is not set to wait for callback to continue
             if (!this.allowPipe) {
@@ -133,8 +139,9 @@ module.exports = (Xpromise, notify) => {
          * `uid` will check for last used uid if not provided
          * `firstPipedData` only provide this initialy at first pipe sequence of this job id
          * `resolveReject` is this a resolve or reject
+         * `endPipe` TODO add option for enc pipe sequence
          * */
-        pipe(cb, uid, firstPipedData = null, resolution = null) {
+        pipe(cb, uid, firstPipedData = null, resolution = null, endPipe) {
             uid = this._getLastRef(uid)
 
             if (this.pipeIndex[uid] === undefined) this.pipeIndex[uid] = 0
@@ -171,11 +178,17 @@ module.exports = (Xpromise, notify) => {
 
                 if (isFunction(cb)) {
                     nextPipe.then(async(v) => {
+                        if (this.pipeMarkDel[uid] === 'used') {
+                            return
+                        }
                         try {
                             var resol = passFailResolution !== null ? passFailResolution : true
                             var d
                             if (resol) d = await cb(v)
                             else d = await cb(null, v)
+
+                            // NOTE will call only when `end()` was initiated
+                            this.endPiping(uid)
 
                             this.callPipeResolution(pipeID, resol, d, uid)
                         } catch (err) {
@@ -199,6 +212,9 @@ module.exports = (Xpromise, notify) => {
                     return this
                 } else {
                     return nextPipe.then(v => {
+                        if (this.pipeMarkDel[uid] === 'used') {
+                            return
+                        }
                         try {
                             var resol = passFailResolution !== null ? passFailResolution : true
 
@@ -237,10 +253,37 @@ module.exports = (Xpromise, notify) => {
 
         /**
          * @end
-         * end promise
+         * end XPipe
          */
         end(uid) {
             uid = this._getLastRef(uid)
+            this.pipe(d => {
+                this.pipeMarkDel[uid] = 'set'
+                return null
+            }, uid)
+            return this
+        }
+        endPiping(uid) {
+            if (this.pipeMarkDel[uid] === 'set') {
+                this.pipeCBList = reduce(this.pipeCBList, (n, el, k) => {
+                    if (k.indexOf(uid) === -1) n[k] = el
+                    return n
+                }, {})
+
+                this.pipePassFail = reduce(this.pipePassFail, (n, el, k) => {
+                    if (k.indexOf(uid) === -1) n[k] = el
+                    return n
+                }, {})
+
+                this.pipeUIDindex = reduce(this.pipeUIDindex, (n, el, k) => {
+                    if (k.indexOf(uid) === -1) n[k] = el
+                    return n
+                }, {})
+
+                delete this.pipeIndex[uid]
+                delete this._startPipeCBs[uid]
+                this.pipeMarkDel[uid] = 'used'
+            }
         }
 
         get pipeList() {
