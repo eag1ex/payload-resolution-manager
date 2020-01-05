@@ -32,10 +32,10 @@ module.exports = () => {
             //     return null
             // })
             // or check to see when one bank is ready!
-            this.prm.pipe(d => {
-                notify.ulog({ message: '-- data set', bank: 'CCBC', d })
-                return d
-            }, this.bank('CCBC'))
+            // this.prm.pipe(d => {
+            //     notify.ulog({ message: '-- data set', bank: 'CCBC', d })
+            //     return d
+            // }, this.bank('CCBC'))
 
             return this
         }
@@ -50,6 +50,14 @@ module.exports = () => {
 
             return validID.id
         }
+
+        fee(total = 0, charge = 0) {
+            // simmulate price change
+            const amount = total - Math.round(Math.random() * charge)
+            const diff = total - amount
+            return { total, diff }
+        }
+
         /**
          * @prm
          * new PRM instance
@@ -76,21 +84,36 @@ module.exports = () => {
         }
 
         get clientList() {
-            return ['John Doe']
+            return [{ name: 'John Doe', portfolio: 100000000 },
+                { name: 'Google', portfolio: 100000 },
+                { name: 'Amazon', portfolio: 20000 },
+                { name: 'Microsoft', portfolio: 30000 },
+                { name: 'Warren Buffett', portfolio: 5000000 }]
         }
 
         transaction() {
-            this.prm.of(this.bank('CCBC'))
+            this.prm.of(this.bank('ICBC'))
                 .compute(d => {
-                    d.dataSet.clents = this.clientList
+                    d.dataSet.clients = this.clientList
+
                     return d
                 }, 'each')
-                // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` option with `pipe's
+                // .compute(d => {
+                //     // charge each client
+                //     d.dataSet.clients.forEach((client, inx) => {
+                //         const { total, diff } = this.fee(client.portfolio, 200)
+                //         client.portfolio = total
+                //         d.dataSet.value = d.dataSet.value + diff
+                //     })
+                //     return d
+                // }, 'each')
+
+            // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` option with `pipe's
                 .pipe(z => {
-                    notify.ulog({ message: '-- transaction made', bank: 'CCBC', d: this.prm.getSet() })
-                }, 'CCBC')
-                // or as promise
-                // .pipe(null, 'CA').then(z => {
+                    notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: this.prm.getSet() })
+                }, 'ICBC')
+            // or as promise
+                // .pipe(null, 'CCBC').then(z => {
                 //     console.log('getSet promise', this.prm.getSet())
                 // })
         }

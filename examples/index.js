@@ -40,7 +40,7 @@ const examplesINIT = () => {
 
 const APP_PROJECT = ()=>{
     const AppProject = require('./app.project.example/app')()
-    new AppProject(false)
+    new AppProject(true)
 }
 APP_PROJECT()
 //const completionExample = require('./app.completion.example')

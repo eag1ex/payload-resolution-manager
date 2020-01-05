@@ -41,9 +41,9 @@ module.exports = (notify, BatchCallbacks) => {
                 //  setTimeout(() => {
                 this.xpromise.pipe((d, err) => {
                     // console.log('pipe d', d, err)
-                    d = cloneDeep(d)
+                    // d = cloneDeep(d)
                     if (err) {
-                        err = cloneDeep(err)
+                        // err = cloneDeep(err)
                         notify.ulog({ message: `pipe err`, err: err })
                     }
                     // NOTE always return value
@@ -56,7 +56,7 @@ module.exports = (notify, BatchCallbacks) => {
             } else {
                 return new Promise((resolve, reject) => {
                     return this.xpromise.pipe(null, id).then(d => {
-                        d = cloneDeep(d)
+                        //  d = cloneDeep(d)
                         // NOTE always return value
                         var dd = d === undefined ? true : d
                         //    setTimeout(() => {
@@ -65,7 +65,7 @@ module.exports = (notify, BatchCallbacks) => {
 
                         return dd
                     }, err => {
-                        err = cloneDeep(err)
+                        // err = cloneDeep(err)
                         notify.ulog({ message: `pipe err`, err: err })
                         // setTimeout(() => {
                         reject(err)
