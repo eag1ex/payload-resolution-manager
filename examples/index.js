@@ -27,16 +27,16 @@ const examplesINIT = () => {
     }
 
     notify.ulog(`uncomment each example to see the output in console`)
-
-    const job_2 = require('./job_2')(resx, exampleData, notify)
+    const job_1 = require('./job_1')(resx, exampleData, notify)
+   // const job_2 = require('./job_2')(resx, exampleData, notify)
     // const job_2 = require('./job_2')(resx,exampleData,notify)
     // notify.ulog({ job_2 })
 
     // const job_3 = require('./job_3')(resx,exampleData,notify)
     // notify.ulog({ job_3 })
-    notify.ulog({ job_2 })
+    notify.ulog({ job_1 })
 } // examplesINIT
-// examplesINIT()
+ //examplesINIT()
 
 const APP_PROJECT = ()=>{
     const AppProject = require('./app.project.example/app')()

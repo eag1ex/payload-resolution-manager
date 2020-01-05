@@ -30,8 +30,8 @@ module.exports = (PRM, exampleData, notify) => {
             item.complete = true
             return item
         }, 'each')
-        .resolution(null, 'job_1')
-    PRM.resolution(null, 'job_2')
+        .resolution(null, 'job_1').d
+    PRM.resolution(null, 'job_2').d
 
     // NOTE set batch resolution
     // PRM.batchReadyolution(['job_1', 'job_2'])

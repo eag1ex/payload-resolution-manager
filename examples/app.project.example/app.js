@@ -87,7 +87,7 @@ module.exports = () => {
                 }, 'each')
                 // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` option with `pipe's
                 .pipe(z => {
-                    notify.ulog({ message: '-- transaction made', bank: 'CCBC', d: this.prm.dataArch })
+                    notify.ulog({ message: '-- transaction made', bank: 'CCBC', d: this.prm.getSet() })
                 }, 'CCBC')
                 // or as promise
                 // .pipe(null, 'CA').then(z => {

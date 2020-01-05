@@ -25,13 +25,11 @@ module.exports = (PRM, exampleData, notify) => {
 
         item.dataSet.age += 30
         item.dataSet.status = 'divorce'
-
         // update only one
         if (item._ri === 0) {
             item.dataSet.status = 'single'
         }
         // item.complete = true
-        console.log('compute!!!')
         return item
     }, 'each') // anonymous uid, check `itemDataSet` first!
     //  .markDone(/* uid */) // will ignore set for uid:job_2 from future updates

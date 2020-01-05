@@ -135,7 +135,9 @@ prm.batchReady([job50, job60, job70], 'flat', d => {
 ##### Methodes explained:
 * `Data Prototypes`: each Job:uid consists of item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of `PrmProto` instance, props: `_uid, _ri` are protected and cannot be overriten to make sure of consistency and prone errors. Only  `dataSet, _timestamp, complete, error` props can be changed. 
 * `uid:String`: Provide uid for every data asset, per job. If not specified, will  try to find last used uid.
-* `data[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()]
+* `dataSet[...]`: Every job must be an array of any value, example: ['string',[],{},null,false,1, new Function()]
+* `_ri`: relational index, keeps position of jobs `dataSet`. Is job dependant, not global.
+
 * `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 

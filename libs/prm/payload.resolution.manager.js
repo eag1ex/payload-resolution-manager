@@ -7,7 +7,7 @@
 
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isString, uniq, cloneDeep, reduce, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, differenceBy, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
     const BatchCallbacks = require('./batch.callbacks')(notify)
     const PRMTOOLS = require('./prm.tools')(notify, BatchCallbacks)
@@ -406,7 +406,10 @@ module.exports = (notify) => {
             this.lastUID = null
             this._itemDataSet = null
             this.d = null
-            this._jobUID_temp = this._jobUID_temp.map(z => z.indexOf(uid) === -1)
+            if (!isEmpty(this._jobUID_temp)) {
+                this._jobUID_temp = this._jobUID_temp.filter(z => z.indexOf(uid) === -1)
+            }
+
             return this
         }
 
@@ -864,6 +867,19 @@ module.exports = (notify) => {
             if (err_format !== null) throw (`dataArch format invalid for: ${err_format}`)
 
             // NOTE
+            // compare and double check index correctness, when `dataArch` is being updated
+            if (this.lastUID) {
+                const ris = this.resIndex[this.lastUID]
+                const jobRI = v[this.lastUID].map(z => z._ri)
+                const noDiff = differenceBy(ris, jobRI, Math.floor).length === 0
+                if (!noDiff) {
+                    // if have difference our `_ri` if wrong
+                    notify.ulog(`[dataArch] _ri index is not correct, difference between resIndex and dataArch[uid]._ri`, true)
+                    throw ('error')
+                }
+            }
+
+            // NOTE
             // assign prototype to each job
             // will make sure that `_ri` and `_uid` cannot be changed or overriten
             for (var uid in v) {
@@ -1037,12 +1053,14 @@ module.exports = (notify) => {
         /**
          * @nextRI
          * - get last available `_ri` or return null
+         *  NOTE _ri incremented value is only job dependant
          */
         nextRI(_uid) {
             this.valUID(_uid)
             if (!this.dataArch[_uid]) return null
 
             var all_ris = this.dataArch[_uid].map(z => z._ri)
+
             return Math.max.apply(null, all_ris)
         }
 
