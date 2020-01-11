@@ -28,48 +28,52 @@ module.exports = (notify, BatchCallbacks) => {
             return this._xpromise
         }
 
-        pipe(cb, id) {
+        /**
+         * @pipe
+         * extends xpromise.pipe
+         * @param cb # callback or data, usualy `this.resData` if callback not set
+         * @param id # optional, but required when `asAsync` is set!
+         */
+        pipe(cb = null, id) {
             if (!id) id = this.lastUID
-            if (!this.xpromise.pipeExists(id)) {
-                notify.ulog(`pipe does not exist for id: ${id}`, true)
-                return this
-            }
+            // else this.lastUID = id
+            // if (!this.xpromise.pipeExists(id)) {
+            //     notify.ulog(`pipe does not exist for id: ${id}`, true)
+            //     return this
+            // }
 
             // NOTE why timeout here? Because this `cb` is out of sync with this.xpromise class callabck
             const timeToWait = 100
+            this.xpromise.initPipe(id, true) // only called initially if never set
             if (typeof cb === 'function') {
-                //  setTimeout(() => {
-                this.xpromise.pipe((d, err) => {
-                    // console.log('pipe d', d, err)
-                    // d = cloneDeep(d)
+                // setTimeout(() => {
+                this.xpromise.pipe(async(d, err) => {
                     if (err) {
-                        // err = cloneDeep(err)
                         notify.ulog({ message: `pipe err`, err: err })
                     }
                     // NOTE always return value
-                    const _dd = cb(d, err)
+                    const _dd = await cb(d, err)
                     var d = _dd === undefined ? true : _dd
                     return d || err
                 }, id)
-                // }, timeToWait)
+                //  }, timeToWait)
                 return this
             } else {
+                // NOTE we cannot use promise directly to customize next pipe data return
+                // sinze every pipe promise returns from last return , if null then alwasy true, if not rejected
+                // use only pipe with callback method to get desired data
                 return new Promise((resolve, reject) => {
                     return this.xpromise.pipe(null, id).then(d => {
-                        //  d = cloneDeep(d)
-                        // NOTE always return value
-                        var dd = d === undefined ? true : d
-                        //    setTimeout(() => {
+                        var cb_data_null = isEmpty(cb) || true
+
+                        var dd = d === undefined ? cb_data_null : d
                         resolve(dd)
-                        // }, timeToWait)
 
                         return dd
                     }, err => {
                         // err = cloneDeep(err)
                         notify.ulog({ message: `pipe err`, err: err })
-                        // setTimeout(() => {
                         reject(err)
-                        //   }, timeToWait)
                         return Promise.reject(err)
                     })
                 })
@@ -156,12 +160,12 @@ module.exports = (notify, BatchCallbacks) => {
         }
 
         /**
-         * @completed
+         * @complete
          * mark job data as complete for all dataSets
          * @param {*} uid
          *
          */
-        completed(uid) {
+        complete(uid) {
             if (uid) this.lastUID = uid
             else uid = this.lastUID
             this.valUID(uid)

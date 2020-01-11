@@ -244,6 +244,55 @@ module.exports = (notify, PayloadResolutioManager) => {
         }
 
         /**
+            * @uncompleteJobMessage
+            * NOTE when `autoComplete` is not set and either `onCompleteSet` or `onCompleteJob`
+            * are set,  and output returns null it means that `dataArch[uid]` is still available to uncompleted jobs
+            * So you have to mark each `.complete` if you with it to return
+        */
+        uncompleteJobMessage(outputIs) {
+            if (isEmpty(outputIs) && !this.autoComplete &&
+                (this.onCompleteSet || this.onCompleteJob) === true) {
+                if (this.debug) {
+                    notify.ulog(`[resolution], output return empty since you havent marked any jobs as .complete, or have not run compute method, alternativety you can manualy run complete(uid) method before resolution() call`)
+                }
+            }
+        }
+
+        /**
+         * @resolutionNearStatus
+         * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect job completed items
+         * when `batch`  is set, and data available (except for default), each batch item will be stored in `batchDataArch`
+         * @param resolutionOutput # required
+         * @param uid # required
+         */
+        resolutionNearStatus(resolutionOutput, uid) {
+            if (isEmpty(resolutionOutput) || !uid) {
+                throw ('[resolutionNearStatus] params cannot be empty')
+            }
+            const batchDataArchStatus = (() => {
+                const btch = cloneDeep(this.batchDataArch)
+                var index = 0
+                for (var k in btch) {
+                    if (k === uid) continue // skip current selection
+                    if (isEmpty(btch[k])) continue
+                    else if ((btch[k] || []).length) index++ // count previous batch selection
+                }
+                return index > 0
+            })()
+            // console.log('batchDataArchStatus', batchDataArchStatus)
+            // console.log('resolutionOutput.selected', resolutionOutput.selected)
+            // console.log('resolutionOutput.output', resolutionOutput.output)
+            var _default = resolutionOutput.selected === 'default'
+            var onlyCompleteJob = (resolutionOutput.selected === 'onlyCompleteJob' && !isEmpty(resolutionOutput.output))
+            var onlyCompleteSet_a = (resolutionOutput.selected === 'onlyCompleteSet' && !isEmpty(resolutionOutput.output))
+
+            // NOTE to resolve batchReady when some completion is available
+            var onlyCompleteSet_b = ((resolutionOutput.selected === 'onlyCompleteSet' &&
+                isEmpty(resolutionOutput.output)) && batchDataArchStatus)
+            return _default || onlyCompleteJob || onlyCompleteSet_a || onlyCompleteSet_b
+        }
+
+        /**
          * @resolutionType
          * provide resolution data base on {opts} setting, either `onlyCompleteSet` or `onlyCompleteJob`
          * sould return one job base on `requirement`
@@ -261,6 +310,7 @@ module.exports = (notify, PayloadResolutioManager) => {
                 const o = []
                 for (var n = 0; n < _fData.length; n++) {
                     var item = this.purgeEmpty(_fData[n])
+
                     // check if item is an object of arrays
                     if (isObject(item) && !isArray(item)) {
                         if (onlyComplete === true) {

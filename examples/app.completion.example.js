@@ -44,7 +44,7 @@ prm.set(d1, job50)
         return v.dataSet.age < 36
     })
 
-// .completed(/**uid*/) // mark job as `complete`
+// .complete(/**uid*/) // mark job as `complete`
 // .resolution()
 
 setTimeout(() => {

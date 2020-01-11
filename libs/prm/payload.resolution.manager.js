@@ -19,7 +19,7 @@ module.exports = (notify) => {
             // NOTE setting PRM opts
             this.optConfig(opts)
             // end
-
+            this.resData = null// cache last resolution data
             this._jobUID_temp = []
             // count calls to resolution method, only when data is available regrdless if complete or not
             this.resolutionINDEX = {/** uid:index */}
@@ -640,34 +640,7 @@ module.exports = (notify) => {
                     if (this.debug) notify.ulog(deleteType)
                 }, doDelete)
 
-                /**
-                 * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect job completed items
-                 * when `batch`  is set, and data available (except for default), each batch item will be stored in `batchDataArch`
-                 */
-
-                const resolutionOK = (() => {
-                    const batchDataArchStatus = (() => {
-                        const btch = cloneDeep(this.batchDataArch)
-                        var index = 0
-                        for (var k in btch) {
-                            if (k === uid) continue // skip current selection
-                            if (isEmpty(btch[k])) continue
-                            else if ((btch[k] || []).length) index++ // count previous batch selection
-                        }
-                        return index > 0
-                    })()
-                    // console.log('batchDataArchStatus', batchDataArchStatus)
-                    // console.log('resolutionOutput.selected', resolutionOutput.selected)
-                    // console.log('resolutionOutput.output', resolutionOutput.output)
-                    var _default = resolutionOutput.selected === 'default'
-                    var onlyCompleteJob = (resolutionOutput.selected === 'onlyCompleteJob' && !isEmpty(resolutionOutput.output))
-                    var onlyCompleteSet_a = (resolutionOutput.selected === 'onlyCompleteSet' && !isEmpty(resolutionOutput.output))
-
-                    // NOTE to resolve batchReady when some completion is available
-                    var onlyCompleteSet_b = ((resolutionOutput.selected === 'onlyCompleteSet' &&
-                        isEmpty(resolutionOutput.output)) && batchDataArchStatus)
-                    return _default || onlyCompleteJob || onlyCompleteSet_a || onlyCompleteSet_b
-                })()
+                const resolutionOK = this.resolutionNearStatus(resolutionOutput, uid)
 
                 if (this.batch && resolutionOK) {
                     this.batchDataArch[uid] = [].concat(resolutionOutput.output, this.batchDataArch[uid])
@@ -692,6 +665,11 @@ module.exports = (notify) => {
                 if (this.strictMode === true && !this.onlyCompleteJob) {
                     if (this.jobUID_history[uid] === false) this.jobUID_history[uid] = true
                 }
+
+                /// /////////
+                this.uncompleteJobMessage(isEmpty(resolutionOutput.output))
+                /// ///////////
+                this.resData = resolutionOutput.output
                 return returnAS(resolutionOutput.output)
             } else {
                 var failed_index = Object.keys(verify).filter(z => verify[z] === false)
@@ -718,6 +696,7 @@ module.exports = (notify) => {
          * - return item
          */
         resolution(externalData = null, uid, dataRef, doDelete = true, pipe) {
+            this.resData = null
             var resSelf = !!(this.resSelf && !this.asAsync) // can use self if not using pipe
             resSelf = resSelf && !pipe ? true : resSelf // can override if using async when pipe is disabled
             if (!externalData && isArray(uid)) {
@@ -734,6 +713,7 @@ module.exports = (notify) => {
                 if (!uid) uid = this.lastUID
                 else this.lastUID = uid
                 this.valUID(uid)
+                if (!resSelf) this.d = null
                 return this._resolution_item(externalData, uid, dataRef, doDelete)
             }
         }
@@ -1003,6 +983,7 @@ module.exports = (notify) => {
                         this._resIndex[uid] = [].concat(this._resIndex[uid], item._ri)
                         try {
                             this.dataArch[uid] = [].concat(this.dataArch[uid], item)
+                            this.dataArch = Object.assign({}, this.dataArch)
                         } catch (err) {
                             if (this.debug) notify.ulog(err, true)
                         }
@@ -1017,6 +998,31 @@ module.exports = (notify) => {
                 //  console.log('all pass, no existence found in other dataSets')
             }
             return this
+        }
+
+        /**
+         * @getFirst
+         * return first item from the job array
+         *
+         */
+        getFirst(uid) {
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
+            this.valUID(uid)
+
+            if (!this.dataArchSealed[uid]) {
+                this.testItemExistence(uid)
+            }
+            if (!this.dataArch[uid]) {
+                if (this.debug) notify.ulog({ message: '[getFirst] not data available for this job id' }, true)
+                return null
+            }
+            const d = cloneDeep(this.dataArch[uid])
+            const fData = head(d)
+            if (isEmpty(fData)) {
+                if (this.debug) notify.ulog({ message: '[getFirst] first data is not available' }, true)
+            }
+            return fData
         }
 
         /**

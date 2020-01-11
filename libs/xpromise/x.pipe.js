@@ -215,6 +215,7 @@ module.exports = (Xpromise, notify) => {
                         if (this.pipeMarkDel[uid] === 'used') {
                             return
                         }
+
                         try {
                             // NOTE will call only when `end()` was initiated
                             this.endPiping(uid)
