@@ -154,6 +154,10 @@ module.exports = () => {
             // and will become available after
             await this.prm.async('ICBC')
 
+            this.prm.onSet(d => {
+                console.log('onset', d)
+            }, 'all')
+
             this.prm
                 .complete('google')
                 .resolution()

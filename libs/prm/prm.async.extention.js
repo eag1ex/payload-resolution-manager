@@ -73,6 +73,8 @@ module.exports = (PRM, notify) => {
          * @async
          * instead of using pipe, but similarly to pipe, wait for promise to resolve with await
          * example: await async(..)  then you can continue
+         * - NOTE: each async(..) method call makes next `.pipe(..)` call return true, so do now expect any othere data, it confirms that the data has been updated or is already available to use.
+         *
          * `id` optional
          */
         async(uid) {
@@ -160,6 +162,7 @@ module.exports = (PRM, notify) => {
          * @onSet
          * wait for all/last jobs to get set and then use PRM tools `pipe` (which gets set after Xpipe does)
          * pipe all/last take `getUIDS` to loop thru all jobs
+         *
          * `cb` called once all jobs are piped down
          * `type=all`: will wait until all initial job vals are set
          * `type=last`: will only wait for last set job and continue
