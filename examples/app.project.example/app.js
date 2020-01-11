@@ -136,6 +136,8 @@ module.exports = () => {
                         const { amount, fee } = this.fee(client.balance, this.charge)
                         client.balance = amount // update internal clients
                         head(d).dataSet.value = head(d).dataSet.value + fee
+
+                        // update cliend job set
                         this.prm.updateDataSet(client.id, 0, client) // update own client balance to mirrow the banks
                     })
                     return d
@@ -148,7 +150,7 @@ module.exports = () => {
                 notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: z })
             }, 'ICBC')
 
-            // NOTE we have to wait for bank to complete, since client jobs were called internaly
+            // NOTE we have to wait for bank to complete first! Since client jobs were called internaly
             // and will become available after
             await this.prm.async('ICBC')
 
@@ -163,6 +165,10 @@ module.exports = () => {
                 .pipe(z => {
                     notify.ulog({ message: '-- client account', balance: 'amazon', d: z })
                 }, 'amazon')
+
+            // NOTE NOW bank/{clients}, and client job's, each include same data!
+            /// ////////////////////////////
+
             // or as promise
             // .pipe(null, 'CCBC').then(z => {
             //     console.log('getSet promise', this.prm.getSet())
