@@ -15,8 +15,10 @@ module.exports = () => {
             this.currency = 'USD'
             this.charge = 100
             this.debug = debug
-            // source # https://fxssi.com/top-20-largest-world-banks-in-current-year
 
+            this.prm.onModelStateChange((uid, model) => {
+                notify.ulog({ message: '[onModelStateChange]', uid, model })
+            })
             this.initialize()
                 .transaction()
         }
@@ -95,6 +97,7 @@ module.exports = () => {
             return cloneDeep(clients)
         }
 
+        // source # https://fxssi.com/top-20-largest-world-banks-in-current-year
         get bankList() {
             return cloneDeep(banks)
         }
@@ -154,9 +157,10 @@ module.exports = () => {
             // and will become available after
             await this.prm.async('ICBC')
 
-            this.prm.onSet(d => {
-                console.log('onset', d)
-            }, 'all')
+            // NOTE check to see what job go set
+            // this.prm.onSet(d => {
+            //     console.log('onset', d)
+            // }, 'all')
 
             this.prm
                 .complete('google')

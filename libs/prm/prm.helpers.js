@@ -10,43 +10,59 @@ module.exports = (notify, PayloadResolutioManager) => {
     class PRMHelpers extends PayloadResolutioManager {
         constructor(debug, opts) {
             super(debug, opts)
+
             this._PrmProto = null
-            this.onUpdate_cb = null
+            this.onModelStateChange_cb = null
+            this.ProtoStateChange_set = null
 
             // NOTE collection of PrmProto state changes
             this.modelStateChangeHistory = {/** uid:{cb, PrmModel} */}
             this.modelStateChange_cbs = {}
+
             if (typeof this.PrmProto.modelStateChange === 'function') {
                 // NOTE
                 // to reduce memory only use `modelStateChange` feature when these conditions are met
-                // `onUpdate_cb` is set when user decides to use PRM model change events
-                const onlyIf = (this.onlyCompleteJob === true && this.batch) || isFunction(this.onUpdate_cb)
+                // `onModelStateChange_cb` is set when user decides to use PRM model change events
+                // onModelStateChange_cb will not work on it own since the callback is initiated later then class init, so we have to use `simpleDispatch` for this
+                const onlyIf = (this.onlyCompleteJob === true && this.batch) || isFunction(this.onModelStateChange_cb)
 
-                if (onlyIf) {
-                    this.PrmProto.modelStateChange((uid, model) => {
-                    // NOTE start counting callbacks and data once resolution was called
-                    // this will cause a lazy callback after resolution
-                        if (this.onlyCompleteJob === true && this.batch) {
-                            if (this.resolutionINDEX[uid]) {
-                                if (!this.modelStateChangeHistory[uid]) this.modelStateChangeHistory[uid] = []
-                                this.modelStateChangeHistory[uid].push(model)
-                                // NOTE function is set from `batchReady` method that calls after 'resolution' does
-                                if (typeof this.modelStateChange_cbs[uid] === 'function') {
-                                    if (this.checkModelHistoryState(uid)) {
-                                        this.modelStateChange_cbs[uid]({ complete: true, uid })
-                                        this.clearStateData(uid)
-                                    }
-                                }
+                if (onlyIf) this.initProtoStateChange()
+            }
+
+            this.nextDispatch = new this.simpleDispatch('modelStateREF', ({ event }, id) => {
+                if (event === 'onModelStateChange') {
+                    this.initProtoStateChange()
+                }
+            })
+        }
+
+        initProtoStateChange() {
+            if (this.ProtoStateChange_set === true) return
+
+            this.PrmProto.modelStateChange((uid, model) => {
+                // NOTE start counting callbacks and data once resolution was called
+                // this will cause a lazy callback after resolution
+                if (this.onlyCompleteJob === true && this.batch) {
+                    if (this.resolutionINDEX[uid]) {
+                        if (!this.modelStateChangeHistory[uid]) this.modelStateChangeHistory[uid] = []
+                        this.modelStateChangeHistory[uid].push(model)
+                        // NOTE function is set from `batchReady` method that calls after 'resolution' does
+                        if (typeof this.modelStateChange_cbs[uid] === 'function') {
+                            if (this.checkModelHistoryState(uid)) {
+                                this.modelStateChange_cbs[uid]({ complete: true, uid })
+                                this.clearStateData(uid)
                             }
                         }
-
-                        // for user output only
-                        if (typeof this.onUpdate_cb === 'function') {
-                            this.onUpdate_cb(uid, cloneDeep(model))
-                        }
-                    })
+                    }
                 }
-            }
+
+                // for user output only
+                if (typeof this.onModelStateChange_cb === 'function') {
+                    this.onModelStateChange_cb(uid, cloneDeep(model))
+                }
+            })
+
+            this.ProtoStateChange_set = true
         }
 
         get PrmProto() {
@@ -78,13 +94,20 @@ module.exports = (notify, PayloadResolutioManager) => {
          * - add another callback listener to execute lazy batchReady when all dataItems are complete
          */
         /**
-         * @onUpdate
-         * needs to be initiated first with `PrmProto`, listen for PromProto changes of each jobs uid dataSet
-         * - method extention of `PrmProto.modelStateChange` class
+         * @onModelStateChange
+         * listen for PromProto changes on each job dataSet
+         * - extention of `PrmProto.modelStateChange` class
+         * - state change only returns new changes, compares previous to current states, to only return latest new changes, same changes are ommited.
          * cb: cb(uid, PrmProto)
          */
-        onUpdate(cb) {
-            this.onUpdate_cb = cb
+        onModelStateChange(cb) {
+            const notSet = this.onlyCompleteJob === true && this.batch
+            if (!notSet) {
+                this.onModelStateChange_cb = cb
+                // alert onModel lazy change that callback is available
+                this.nextDispatch.next({ event: 'onModelStateChange' })
+            }
+
             return this
         }
 

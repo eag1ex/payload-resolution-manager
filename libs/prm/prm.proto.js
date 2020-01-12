@@ -5,7 +5,7 @@
 */
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isNumber, isObject, isArray, omit, isString, cloneDeep } = require('lodash')
+    const { isEmpty, isNumber, isObject, isArray, omit, isString, cloneDeep, isEqual } = require('lodash')
 
     class PrmProto {
         constructor(debug) {
@@ -13,6 +13,7 @@ module.exports = (notify) => {
             this._modelBase = {}
             this.modelBase = {} // set only once
             this.modelStateChange_CB = null
+            this._modelStateHistory = {/** previous, current */}// compare states, only return when states are different
         }
 
         /**
@@ -45,6 +46,43 @@ module.exports = (notify) => {
         resetModel() {
             this._modelBase = {}
             this.modelBase = {} // set only once
+        }
+        /**
+         * call when model is finaly resolved, then destroy any data
+         */
+        resetFinaly(uid) {
+            // this.resetModel()
+            delete this._modelStateHistory[uid]
+        }
+
+        modelStateHistory(nextState, uid) {
+            if (!uid) return false
+            var newChange = false
+            if (!this._modelStateHistory[uid]) {
+                this._modelStateHistory[uid] = {
+                    current: null,
+                    previous: null
+                }
+            } else {
+                // NOTE  do nothing is current state is the same as the nextState
+                if (isEqual(nextState, this._modelStateHistory[uid].current)) {
+                    // notify.ulog({ message: '[modelStateHistory] nextState same [current] state, ommiting callback on change' })
+                    this._modelStateHistory[uid].previous = nextState
+                    newChange = false
+                    return false
+                }
+
+                if (this._modelStateHistory[uid].current !== null) {
+                    this._modelStateHistory[uid].previous = this._modelStateHistory[uid].current
+                    this._modelStateHistory[uid].current = nextState
+                    newChange = true
+                } else {
+                    this._modelStateHistory[uid].current = nextState
+                    newChange = true
+                }
+            }
+
+            return newChange
         }
 
         // NOTE doesnt work well with dynamic changes
@@ -118,7 +156,8 @@ module.exports = (notify) => {
 
                                     // NOTE only initiate callback when `dataSet` already exists
                                     if (readySet) {
-                                        self.modelStateChange_CB(m._uid, m)
+                                        const newChange = self.modelStateHistory(m, m._uid)
+                                        if (newChange) self.modelStateChange_CB(m._uid, m)
                                     }
                                 }
                             }

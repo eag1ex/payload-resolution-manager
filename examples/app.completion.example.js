@@ -23,7 +23,7 @@ var d1 = [{ name: 'alex', age: 20 }, { name: 'jackie', age: 32 }] // _ri = 0,1
 var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 2,3
 var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 4,5,6
 
-// prm.onUpdate((uid, model) => {
+// prm.onModelStateChange((uid, model) => {
 //     notify.ulog({ uid, model })
 // })
 prm.set(d1, job50)
