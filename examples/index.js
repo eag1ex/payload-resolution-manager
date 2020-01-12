@@ -42,7 +42,29 @@ const APP_PROJECT = ()=>{
     const AppProject = require('./app.project.example/app')()
     new AppProject(false)
 }
-APP_PROJECT()
+//APP_PROJECT()
 //const completionExample = require('./app.completion.example')
 //const asyncExample = require('./app.async.example')
 //const mixedExample = require('./app.example')
+
+
+// test new dispatch
+const BatchReady = require('../libs/prm/prm.batchReadyV2')()
+
+const br = new BatchReady()
+const dispatch1 = br.dispatch('test', (d,id) => {
+    console.log('d test',d,id)
+})
+
+// const dispatch2 = br.dispatch('test2', (d,id) => {
+//     console.log('d test',d,id)
+// })
+    // dispatch1.next({data:1})
+    
+  
+    
+    br.batchReady('test',d=>{
+        console.log('batchReady cb',d)
+    })
+    dispatch1.next({data:2})
+   
