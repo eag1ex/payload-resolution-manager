@@ -14,7 +14,7 @@ module.exports = (notify, PayloadResolutioManager) => {
             this._PrmProto = null
             this.onModelStateChange_cb = null
             this.ProtoStateChange_set = null
-
+            this._dspch = {} // collect SimpleDispatch instances
             // NOTE collection of PrmProto state changes
             this.modelStateChangeHistory = {/** uid:{cb, PrmModel} */}
             this.modelStateChange_cbs = {}
@@ -48,7 +48,8 @@ module.exports = (notify, PayloadResolutioManager) => {
                         this.modelStateChangeHistory[uid].push(model)
                         // NOTE function is set from `batchReady` method that calls after 'resolution' does
                         if (typeof this.modelStateChange_cbs[uid] === 'function') {
-                            if (this.checkModelHistoryState(uid)) {
+                            const historyStat = this.checkModelHistoryState(uid)
+                            if (historyStat) {
                                 this.modelStateChange_cbs[uid]({ complete: true, uid })
                                 this.clearStateData(uid)
                             }
@@ -119,6 +120,7 @@ module.exports = (notify, PayloadResolutioManager) => {
          */
         incrementResolutionCalls(uid) {
             if (this.onlyCompleteJob && this.batch) {
+                // console.log('set incrementResolutionCalls', uid)
                 if (this.resolutionINDEX[uid] !== undefined) {
                     this.resolutionINDEX[uid]++
                 } else {
@@ -126,12 +128,26 @@ module.exports = (notify, PayloadResolutioManager) => {
                 }
                 if (typeof this.resolutionINDEX_cb === 'function') {
                     this.resolutionINDEX_cb(uid)
+                    console.log('callback for ', uid)
                 }
             }
         }
 
         get simpleDispatch() {
             return new SimpleDispatch().dispatch
+        }
+
+        /**
+         * @dispatcher
+         * collect all dispatchers so not are anonumous
+         * @param {*} uid
+         * @param {*} cb
+         */
+        dispatcher(uid, cb) {
+            if (!this._dspch[uid]) {
+                this._dspch[uid] = new this.simpleDispatch(uid, cb)
+            }
+            return this._dspch[uid]
         }
 
         /**

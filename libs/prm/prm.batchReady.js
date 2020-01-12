@@ -24,8 +24,8 @@ module.exports = (notify, PRM) => {
             if (!this.batch) return null
             if (!isArray(jobUIDS)) return null
             if (!jobUIDS.length) return null
-
-            var alreadyDone = null
+            const uidRef = jobUIDS.toString().replace(/,/g, '--')
+            var alreadyDone = {}
             if (!type) type = 'flat' // set default
 
             // must also be valid
@@ -94,7 +94,7 @@ module.exports = (notify, PRM) => {
 
                     if (r === null) return
                     doneCB(r)
-                    alreadyDone = true
+                    alreadyDone[uidRef] = true
                     times(jobUIDS.length, (inx) => {
                         this.delSet(jobUIDS[inx], true)
                         // delete this.modelStateChange_cbs[jobUIDS[inx]]
@@ -106,9 +106,10 @@ module.exports = (notify, PRM) => {
 
                 // NOTE @simpleDispatch
                 //  `simpleDispatch` class to easly cascade thru events, then resolve when satisfied!
-                const uidRef = jobUIDS.toString().replace(/,/g, '--')
+
                 var statusSet = []
 
+                // FIXME  perhaps we should not
                 const smd = new this.simpleDispatch(uidRef, e => {
                     statusSet.push(e.event)
                     if (this.onlyCompleteJob) {
@@ -124,7 +125,7 @@ module.exports = (notify, PRM) => {
                         }
                     }
                     if (e.event === 'batchCBDone') {
-                        if (this.debug) notify.ulog({ message: 'batchReady done' })
+                        // if (this.debug) notify.ulog({ message: 'batchReady done' })
                         exitWithCB()
                     }
                 })
@@ -133,21 +134,26 @@ module.exports = (notify, PRM) => {
                  *   // lazy callback
                  * -----------------------------------
                  */
-                if (!alreadyDone && this.onlyCompleteJob === true) {
+
+                if (!alreadyDone[uidRef] && this.onlyCompleteJob === true) {
                     var modelUIDS = []
+
                     times(jobUIDS.length, inx => {
                         const jobUID = jobUIDS[inx]
-                        this.modelStateChange_cbs[jobUID] = (status) => {
-                            const modelUID = status.uid
-                            if (status.complete) {
-                                modelUIDS.push(modelUID)
-                                modelUIDS = uniq(modelUIDS)
-                                // must match so we know the result is valid
-                                if (modelUIDS.length === jobUIDS.length && !alreadyDone) {
-                                    smd.next({ event: 'modelStateChange', status: 'complete' })
+
+                        if (!this.modelStateChange_cbs[jobUID]) {
+                            this.modelStateChange_cbs[jobUID] = (status) => {
+                                const modelUID = status.uid
+                                if (status.complete) {
+                                    modelUIDS.push(modelUID)
+                                    modelUIDS = uniq(modelUIDS)
+                                    // must match so we know the result is valid
+                                    if (modelUIDS.length === jobUIDS.length && !alreadyDone[uidRef]) {
+                                        smd.next({ event: 'modelStateChange', status: 'complete' })
+                                    }
                                 }
-                            }
-                        } // modelStateChange_cbs
+                            } // modelStateChange_cbs
+                        }
 
                         if (!this.resolutionINDEX_cb[jobUID]) {
                             this.resolutionINDEX_cb[jobUID] = (status) => {
@@ -162,10 +168,10 @@ module.exports = (notify, PRM) => {
                  * called as backup and when not using `onlyCompleteJob` option
                  * -----------------------------------
                  */
-                if (!alreadyDone) {
+                if (!alreadyDone[uidRef]) {
                     this.batchCBDone(jobUIDS, (pass) => {
                         if (!pass) return
-                        if (!alreadyDone) {
+                        if (!alreadyDone[uidRef]) {
                             smd.next({ event: 'batchCBDone', status: 'complete' })
                         }
                     })

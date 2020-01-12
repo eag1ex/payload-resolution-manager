@@ -13,7 +13,7 @@ module.exports = (notify) => {
         constructor(debug) {
             this.debug = debug
             this.batchCBList = {}
-            this.batchCB_copy = null // keep cb copy
+            this.batchCB_copy = {} // keep cb copy
             this.batchHistory = {} // {index:[],..} keep batch history so we dont call same batch again
         }
 
@@ -157,17 +157,18 @@ module.exports = (notify) => {
 
             try {
                 // store the callback
-                if (!this.batchCB_copy && typeof cb === 'function') this.batchCB_copy = cb
+                if (!this.batchCB_copy[uid] && typeof cb === 'function') this.batchCB_copy[uid] = cb
 
                 // check if any callbacks in que
                 for (var k in this.batchCBList) {
                     if (!this.batchCBList.hasOwnProperty(k)) return
 
                     if (this.batchCBList[k] === true && !cb) {
-                        if (this.batchCB_copy) {
-                            this.batchCBList[k] = this.batchCB_copy
+                        if (this.batchCB_copy[uid]) {
+                            this.batchCBList[k] = this.batchCB_copy[uid]
                             // make sure to only call it when we know callback is available
                             this.batchCBList[k](k)
+                            delete this.batchCB_copy[uid]
                             // turn off once callled
                             this.batchCBList[k] = false
                         }
@@ -180,9 +181,10 @@ module.exports = (notify) => {
                         return
                     }
                     if (this.batchCBList[uid] === undefined && !cb) {
-                        if (this.batchCB_copy) {
-                            this.batchCBList[uid] = this.batchCB_copy
+                        if (this.batchCB_copy[uid]) {
+                            this.batchCBList[uid] = this.batchCB_copy[uid]
                             this.batchCBList[uid](uid)
+                            delete this.batchCB_copy[uid]
                             this.batchCBList[uid] = false
                         } else {
                             this.batchCBList[uid] = true

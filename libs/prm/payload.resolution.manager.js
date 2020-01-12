@@ -646,13 +646,14 @@ module.exports = (notify) => {
                     this.batchDataArch[uid] = [].concat(resolutionOutput.output, this.batchDataArch[uid])
                     this.batchDataArch[uid] = this.batchDataArch[uid].filter(z => z !== undefined)
                     // make sure it calls after anything
-                    setTimeout(() => {
-                        this.batchCB(uid) // set
-                        // NOTE when invoking this we make sure that `batchDataArch` is already set!
-                        if (typeof this.resolutionINDEX_cb[uid] === 'function') {
-                            this.resolutionINDEX_cb[uid]('resolution batch ready')
-                        }
-                    }, 100)
+                    //  setTimeout(() => {
+                    this.batchCB(uid) // set
+                    // NOTE when invoking this we make sure that `batchDataArch` is already set!
+                    if (typeof this.resolutionINDEX_cb[uid] === 'function') {
+                        this.resolutionINDEX_cb[uid]('resolution batch ready')
+                        //  console.log('callback for ', uid)
+                    }
+                    //   }, 100)
                 }
                 // NOTE increment how many times resolution is called for each job
                 // used with lazy PrmProto callback when complete, so batchReady can make final call

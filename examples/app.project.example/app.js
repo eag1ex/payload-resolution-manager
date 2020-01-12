@@ -3,6 +3,8 @@
  * @BankApp
  * more practical integration of PRM framework with BankApp example
  * - simmulation funds transaction and proxy
+ * - make a bank enquiry, then make enquiry to each client, update changes to the bank and the client
+ * - finaly return results
  */
 module.exports = () => {
     const notify = require('../../libs/notifications')()
@@ -16,17 +18,19 @@ module.exports = () => {
             this.charge = 100
             this.debug = debug
 
-            this.prm.onModelStateChange((uid, model) => {
-                notify.ulog({ message: '[onModelStateChange]', uid, model })
-            })
+            // NOTE can listen to changes on all available jobs, currently: {bank} and {clients}
+            // this.prm.onModelStateChange((uid, model) => {
+            //     notify.ulog({ message: '[onModelStateChange]', uid, model })
+            // })
+
             this.initialize()
                 .transaction()
         }
 
         /**
- * @prm
- * new PRM instance
-*/
+         * @prm
+         * new PRM instance
+        */
         get prm() {
             if (this._prm) return this._prm
             this._prm = new PRM(this.debug, this.prmSettings)
@@ -37,7 +41,7 @@ module.exports = () => {
             return {
                 asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
                 strictMode: true, // make sure jobs of the same uid cannot be called again!
-                onlyCompleteSet: true, // `resolution` will only return dataSets marked `complete`
+                onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
                 batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
                 resSelf: true, // allow chaning multiple resolution
                 autoComplete: true // auto set complete on every compute iteration within `each` call
@@ -102,6 +106,17 @@ module.exports = () => {
             return cloneDeep(banks)
         }
 
+        /**
+         * @asyncData
+         * simulated fetch delay
+         */
+        asyncData(time = 2000, data) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve(data)
+                }, time)
+            })
+        }
         async enquiryClientData(clientList) {
             if (!isArray(clientList)) return
 
@@ -125,7 +140,7 @@ module.exports = () => {
             this.prm.of(this.bank('ICBC'))
                 .compute(async(d) => {
                     // wait for available clients
-                    const { clientData } = await this.enquiryClientData(['john-doe', 'google', 'amazon'])
+                    const { clientData } = await this.enquiryClientData(['google', 'amazon', 'microsoft', 'warren-buffett'])
 
                     // we only have 1 array to loop
                     d.forEach((item, inx) => {
@@ -140,18 +155,18 @@ module.exports = () => {
                         client.balance = amount // update internal clients
                         head(d).dataSet.value = head(d).dataSet.value + fee
 
-                        // update cliend job set
-                        this.prm.updateDataSet(client.id, 0, client) // update own client balance to mirrow the banks
+                        // update own client balance to mirrow the bank
+                        this.prm.updateDataSet(client.id, 0, client)
                     })
                     return d
                 }, 'all')
-                .resolution()
+                // .resolution()
 
             // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` option with `pipe's
-            this.prm.pipe(z => {
-                // also this.prm.resData
-                notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: z })
-            }, 'ICBC')
+            // this.prm.pipe(z => {
+            //     // also this.prm.resData
+            //     notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: z })
+            // }, 'ICBC')
 
             // NOTE we have to wait for bank to complete first! Since client jobs were called internaly
             // and will become available after
@@ -162,10 +177,15 @@ module.exports = () => {
             //     console.log('onset', d)
             // }, 'all')
 
+            // NOTE at this point all data for these jobs got cleared!
             this.prm
                 .complete('google')
                 .resolution()
                 .complete('amazon')
+                .resolution()
+                .complete('microsoft')
+                .resolution()
+                .complete('warren-buffett')
                 .resolution()
                 .pipe(z => {
                     notify.ulog({ message: '-- client account', balance: 'google', d: z })
@@ -181,22 +201,60 @@ module.exports = () => {
             // .pipe(null, 'CCBC').then(z => {
             //     console.log('getSet promise', this.prm.getSet())
             // })
-        }
 
-        /**
-         * @interTransfer
-         * make international transfer
-         */
-        interTransfer() {
-
-        }
-
-        asyncData(time = 2000, data) {
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    resolve(data)
-                }, time)
+            // receive final callback on batch/id listed jobs
+            this.prm.batchReady(['amazon', 'google', 'microsoft', 'warren-buffett'], 'grouped', (d) => {
+                notify.ulog({ message: 'batchReady', d })
             })
+
+            // NOTE we still have 1 `john-doe`client that we didnt charge
+            // if we dont call resolution on the bank we can still charge within this run/event
+            this.prm
+                .of('ICBC')
+                .compute(async(d) => {
+                    const clientID = `john-doe`
+
+                    await this.prm.async(clientID)
+                    const { dataSet } = head(this.prm.getSet(clientID))
+
+                    const { amount, fee } = this.fee(dataSet.balance, this.charge)
+                    dataSet.balance = amount
+
+                    // update bank, then update client
+                    const { clients } = head(d).dataSet
+                    head(d).dataSet.clients = [].concat(clients, dataSet)
+                    head(d).dataSet.value = head(d).dataSet.value + fee
+                    this.prm.updateDataSet(clientID, 0, dataSet)
+
+                    return d
+                }, 'all')
+                .complete()
+                .resolution()
+
+            // .pipe(z => {
+            //     // also this.prm.resData
+            //     notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: z })
+            // }, 'ICBC')
+
+            // wait for bank update
+            await this.prm.async('ICBC')
+
+            this.prm
+                .complete('john-doe')
+                .resolution()
+                .pipe(z => {
+                    // also this.prm.resData
+                    notify.ulog({ message: '-- transaction made', client: 'john-doe', d: z })
+                }, 'john-doe')
+
+            // NOTE perhaps john-doe is a special client of the BANK, we can do final batch since resolution
+            // for both has already been set!
+
+            this.prm.batchReady(['ICBC'], 'grouped', (d) => {
+                notify.ulog({ message: 'batchReady for bank', d })
+            })
+
+            // all done
         }
     }
     return BankApp
