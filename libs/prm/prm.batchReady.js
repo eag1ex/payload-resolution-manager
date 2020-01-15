@@ -24,6 +24,12 @@ module.exports = (notify, PRM) => {
             if (!this.batch) return null
             if (!isArray(jobUIDS)) return null
             if (!jobUIDS.length) return null
+
+            const _jobUIDS = uniq(jobUIDS)
+            if (_jobUIDS.length !== jobUIDS.length) {
+                jobUIDS = uniq(jobUIDS)
+                notify.ulog(`[batchReady] you provided duplicate ids in your batch, please fix it, error has been corrected`, true)
+            }
             const uidRef = jobUIDS.toString().replace(/,/g, '--')
             var alreadyDone = {}
             if (!type) type = 'flat' // set default
@@ -83,26 +89,44 @@ module.exports = (notify, PRM) => {
                 return batchedJobs
             }
 
+            const exitWithCB = () => {
+                var r = performResolution()
+
+                if (r === null) return
+                doneCB(r)
+                alreadyDone[uidRef] = true
+                times(jobUIDS.length, (inx) => {
+                    this.delSet(jobUIDS[inx], true)
+                    // NOTE when job is forfilled only then set it!
+                    if (this.strictMode) this.jobUID_history[jobUIDS[inx]] = true
+                    this.eventDispatcher.del(jobUIDS[inx])
+                })
+                purgeBatchDataArch()
+            }
+
             if (typeof doneCB === 'function') {
+                if (this.onlyCompleteJob === true || this.onlyCompleteSet === true) {
+                    var totals = []
+                    times(jobUIDS.length, (inx) => {
+                        const id = jobUIDS[inx]
+                        this.eventDispatcher.batchReady(id, (d, uid) => {
+                            // make sure ids match
+                            if (indexOf(jobUIDS, uid) !== -1) {
+                                totals.push(id)
+                                totals = uniq(totals)
+                            }
+
+                            if (totals.length === jobUIDS.length) {
+                                exitWithCB()
+                            }
+                        })
+                    })
+                }
+
                 /**
                  * NOTE only one or the other should fire once
                  * `modelStateChange_cbs` is set from `prm.helpers` and extended from `this.PrmProto.modelStateChange` this option if only available if `onlyCompleteJob` if enabled!
                  */
-
-                const exitWithCB = () => {
-                    var r = performResolution()
-
-                    if (r === null) return
-                    doneCB(r)
-                    alreadyDone[uidRef] = true
-                    times(jobUIDS.length, (inx) => {
-                        this.delSet(jobUIDS[inx], true)
-                        // delete this.modelStateChange_cbs[jobUIDS[inx]]
-                        // NOTE when job is forfilled only then set it!
-                        if (this.strictMode) this.jobUID_history[jobUIDS[inx]] === true
-                    })
-                    purgeBatchDataArch()
-                }
 
                 // NOTE @simpleDispatch
                 //  `simpleDispatch` class to easly cascade thru events, then resolve when satisfied!
@@ -110,72 +134,72 @@ module.exports = (notify, PRM) => {
                 var statusSet = []
 
                 // FIXME  perhaps we should not
-                const smd = new this.simpleDispatch(uidRef, e => {
-                    statusSet.push(e.event)
-                    if (this.onlyCompleteJob) {
-                        const satisfied = uniq(statusSet).filter(z => {
-                            return z === 'resolutionINDEX' || z === 'modelStateChange'
-                        }).length
+                // const smd = new this.simpleDispatch(uidRef, e => {
+                //     statusSet.push(e.event)
+                //     if (this.onlyCompleteJob) {
+                //         const satisfied = uniq(statusSet).filter(z => {
+                //             return z === 'resolutionINDEX' || z === 'modelStateChange'
+                //         }).length
 
-                        //
-                        if (satisfied === 2) {
-                            if (this.debug) notify.ulog({ message: 'batchReady complete on lazy complete' })
-                            exitWithCB()
-                            return
-                        }
-                    }
-                    if (e.event === 'batchCBDone') {
-                        // if (this.debug) notify.ulog({ message: 'batchReady done' })
-                        exitWithCB()
-                    }
-                })
+                //         //
+                //         if (satisfied === 2) {
+                //             if (this.debug) notify.ulog({ message: 'batchReady complete on lazy complete' })
+                //             exitWithCB()
+                //             return
+                //         }
+                //     }
+                //     if (e.event === 'batchCBDone') {
+                //         // if (this.debug) notify.ulog({ message: 'batchReady done' })
+                //         exitWithCB()
+                //     }
+                // })
                 /**
                  *   callback available when onlyCompleteJob is set
                  *   // lazy callback
                  * -----------------------------------
                  */
 
-                if (!alreadyDone[uidRef] && this.onlyCompleteJob === true) {
-                    var modelUIDS = []
+                // if (!alreadyDone[uidRef] && this.onlyCompleteJob === true) {
+                //     var modelUIDS = []
 
-                    times(jobUIDS.length, inx => {
-                        const jobUID = jobUIDS[inx]
+                //     times(jobUIDS.length, inx => {
+                //         const jobUID = jobUIDS[inx]
 
-                        if (!this.modelStateChange_cbs[jobUID]) {
-                            this.modelStateChange_cbs[jobUID] = (status) => {
-                                const modelUID = status.uid
-                                if (status.complete) {
-                                    modelUIDS.push(modelUID)
-                                    modelUIDS = uniq(modelUIDS)
-                                    // must match so we know the result is valid
-                                    if (modelUIDS.length === jobUIDS.length && !alreadyDone[uidRef]) {
-                                        smd.next({ event: 'modelStateChange', status: 'complete' })
-                                    }
-                                }
-                            } // modelStateChange_cbs
-                        }
+                //         if (!this.modelStateChange_cbs[jobUID]) {
+                //             this.modelStateChange_cbs[jobUID] = (status) => {
+                //                 const modelUID = status.uid
+                //                 if (status.complete) {
+                //                     modelUIDS.push(modelUID)
+                //                     modelUIDS = uniq(modelUIDS)
+                //                     // must match so we know the result is valid
+                //                     if (modelUIDS.length === jobUIDS.length && !alreadyDone[uidRef]) {
+                //                         smd.next({ event: 'modelStateChange', status: 'complete' })
+                //                     }
+                //                 }
+                //             } // modelStateChange_cbs
+                //         }
 
-                        if (!this.resolutionINDEX_cb[jobUID]) {
-                            this.resolutionINDEX_cb[jobUID] = (status) => {
-                                smd.next({ event: 'resolutionINDEX', status: 'complete' })
-                            }// resolutionINDEX_cb
-                        }
-                    })
-                }
+                //         if (!this.resolutionINDEX_cb[jobUID]) {
+                //             this.resolutionINDEX_cb[jobUID] = (status) => {
+                //                 smd.next({ event: 'resolutionINDEX', status: 'complete' })
+                //             }// resolutionINDEX_cb
+                //         }
+                //     })
+                // }
 
                 /**
                  *
                  * called as backup and when not using `onlyCompleteJob` option
                  * -----------------------------------
                  */
-                if (!alreadyDone[uidRef]) {
-                    this.batchCBDone(jobUIDS, (pass) => {
-                        if (!pass) return
-                        if (!alreadyDone[uidRef]) {
-                            smd.next({ event: 'batchCBDone', status: 'complete' })
-                        }
-                    })
-                }
+                // if (!alreadyDone[uidRef]) {
+                //     this.batchCBDone(jobUIDS, (pass) => {
+                //         if (!pass) return
+                //         if (!alreadyDone[uidRef]) {
+                //             smd.next({ event: 'batchCBDone', status: 'complete' })
+                //         }
+                //     })
+                // }
 
                 return null
             } else {

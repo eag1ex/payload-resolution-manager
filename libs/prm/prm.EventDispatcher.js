@@ -1,13 +1,39 @@
 
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    class BatchReadyV2 {
-        constructor() {
+
+    class EventDispatcher {
+        constructor(debug) {
+            this.debug = debug
             this.cbQueue = {}
             this.dispatchInstance = {}
         }
 
-        dispatch(uid, cb = null) {
+        initListener(uid, cb) {
+            this.Dispatch(uid, cb)
+            return this
+        }
+
+        /**
+         * @next
+         * send next data to the `batchReady` callback
+         * @param {*} uid # required
+         * @param {*} data # optional
+         */
+        next(uid, data = null) {
+            if (this.dispatchInstance[uid]) {
+                this.dispatchInstance[uid].next(data)
+            } else notify.ulog(`dispatchInstance for uid ${uid} not available`, true)
+            return this
+        }
+
+        /**
+         * @Dispatch
+         * master listener, sends all event callbacks to `batchReady`
+         * @param {*} uid
+         * @param {*} cb
+         */
+        Dispatch(uid, cb = null) {
             const self = this
             const D = function(uid, cb) {
                 this.uid = uid
@@ -65,10 +91,36 @@ module.exports = (notify) => {
             return this.dispatchInstance[uid]
         }
 
+        del(uid) {
+            delete this.cbQueue[uid]
+            delete this.dispatchInstance[uid]
+
+            if (!this.cbQueue[uid] && !this.dispatchInstance[uid]) {
+                if (this.debug) notify.ulog(`cbQueue and dispatchInstance for uid ${uid} deleted`)
+            }
+
+            return this
+        }
+
+        /**
+         * @batchReady
+         * wait for callbacks forwarded from Dispatch and returned in callback of this method
+         * - Dispatch must be set initially before you call `batchReady`
+         * @param {*} id # required
+         * @param {*} cb #required
+         */
         batchReady(id, cb) {
-            // if (!this.cbQueue[id]) this.cbQueue[id] = cb
+            const isFN = typeof cb === 'function'
+            if (!isFN) {
+                notify.ulog(`[batchReady] cb must be set`, true)
+                return this
+            }
+            if (!this.dispatchInstance[id]) {
+                notify.ulog(`[batchReady] no dispatchInstance found, make sure Dispatch is called first`, true)
+            }
             if (this.dispatchInstance[id]) this.dispatchInstance[id].next({ type: 'cb', cb })
+            return this
         }
     }
-    return BatchReadyV2
+    return EventDispatcher
 }

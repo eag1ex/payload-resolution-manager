@@ -28,7 +28,7 @@ const examplesINIT = () => {
 
     notify.ulog(`uncomment each example to see the output in console`)
     const job_1 = require('./job_1')(resx, exampleData, notify)
-   // const job_2 = require('./job_2')(resx, exampleData, notify)
+    // const job_2 = require('./job_2')(resx, exampleData, notify)
     // const job_2 = require('./job_2')(resx,exampleData,notify)
     // notify.ulog({ job_2 })
 
@@ -36,9 +36,9 @@ const examplesINIT = () => {
     // notify.ulog({ job_3 })
     notify.ulog({ job_1 })
 } // examplesINIT
- //examplesINIT()
+//examplesINIT()
 
-const APP_PROJECT = ()=>{
+const APP_PROJECT = () => {
     const AppProject = require('./app.project.example/app')()
     new AppProject(false)
 }
@@ -48,23 +48,24 @@ const APP_PROJECT = ()=>{
 //const mixedExample = require('./app.example')
 
 
-// test new dispatch
-const BatchReady = require('../libs/prm/prm.batchReadyV2')()
 
-const br = new BatchReady()
-const dispatch1 = br.dispatch('test', (d,id) => {
-    console.log('d test',d,id)
+// test new dispatch
+const EventDispatcher = require('../libs/prm/prm.EventDispatcher')()
+
+const Env = new EventDispatcher()
+Env.initListener('test', (d, id) => {  
+})
+Env.initListener('test2', (d, id) => {  
 })
 
-// const dispatch2 = br.dispatch('test2', (d,id) => {
-//     console.log('d test',d,id)
-// })
-    // dispatch1.next({data:1})
-    
-  
-    
-    br.batchReady('test',d=>{
-        console.log('batchReady cb',d)
-    })
-    dispatch1.next({data:2})
-   
+
+Env.next('test',{ data: 2 })
+
+Env.batchReady('test', (d,id) => {
+    console.log('batchReady1 cb', d, id)
+})
+Env.batchReady('test2', (d,id) => {
+    console.log('batchReady2 cb', d, id)
+})
+
+Env.next('test2',{ data: 3 })

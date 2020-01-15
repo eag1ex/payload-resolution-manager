@@ -17,39 +17,6 @@ module.exports = (notify) => {
             this.batchHistory = {} // {index:[],..} keep batch history so we dont call same batch again
         }
 
-        // createCBListener(prop) {
-        //     const self = this
-        //     const _prop = prop
-        //     try {
-        //         (function(prop) {
-        //             Object.defineProperty(self, prop, {
-        //                 get: function() {
-        //                     return self[`_${_prop}`]
-        //                 },
-        //                 set: function(val) {
-        //                     self[`_${_prop}`] = val
-
-        //                     // notify.ulog({ message: 'prop set', val: self[`_${_prop}`] })
-        //                     //  setTimeout(() => {
-        //                     var prps = cloneDeep(self[`_${_prop}`])
-        //                     for (var k in prps) {
-        //                         if (!prps.hasOwnProperty(k)) continue
-        //                         var uid = k
-        //                         if (typeof self.batchCBList[uid] === 'function') {
-        //                             self.batchCBList[uid](val)
-        //                         }
-        //                     }
-        //                     // }, 100)
-        //                 },
-        //                 configurable: true, // strict
-        //                 enumerable: true /// make it visible
-        //             })
-        //         })(prop)
-        //     } catch (err) {
-        //         console.log('-- err cresting listener ', err)
-        //     }
-        // }
-
         /**
          * @testDoneBatch
          * test if this batch was previously set, only if `batchUniq` option is available
