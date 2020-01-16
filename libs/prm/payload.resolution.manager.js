@@ -9,9 +9,7 @@ module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isString, uniq, cloneDeep, reduce, differenceBy, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
 
-    const BatchCallbacks = require('./batch.callbacks')(notify)
-    const PRMTOOLS = require('./prm.tools')(notify, BatchCallbacks)
-
+    const PRMTOOLS = require('./prm.tools')(notify)
     class PayloadResolutioManager extends PRMTOOLS {
         constructor(debug, opts = {}) {
             super(debug)
@@ -654,7 +652,9 @@ module.exports = (notify) => {
                     //     //  console.log('callback for ', uid)
                     // }
                     //   }, 100)
+
                     this.eventDispatcher.initListener(uid, (d) => {})
+                        .next(uid, { message: 'resolution set' })
                 }
                 // NOTE increment how many times resolution is called for each job
                 // used with lazy PrmProto callback when complete, so batchReady can make final call

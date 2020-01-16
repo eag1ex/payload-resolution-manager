@@ -16,7 +16,6 @@ module.exports = (notify, PayloadResolutioManager) => {
             this.ProtoStateChange_set = null
             this._dspch = {} // collect SimpleDispatch instances
             // NOTE collection of PrmProto state changes
-            this.modelStateChangeHistory = {/** uid:{cb, PrmModel} */}
             this.modelStateChange_cbs = {}
 
             // if (typeof this.PrmProto.modelStateChange === 'function') {
@@ -41,23 +40,6 @@ module.exports = (notify, PayloadResolutioManager) => {
             if (!isFunction(this.PrmProto.modelStateChange)) return
 
             this.PrmProto.modelStateChange((uid, model) => {
-                // NOTE start counting callbacks and data once resolution was called
-                // this will cause a lazy callback after resolution
-                // if (this.onlyCompleteJob === true && this.batch) {
-                //     if (this.resolutionINDEX[uid]) {
-                //         if (!this.modelStateChangeHistory[uid]) this.modelStateChangeHistory[uid] = []
-                //         this.modelStateChangeHistory[uid].push(model)
-                //         // NOTE function is set from `batchReady` method that calls after 'resolution' does
-                //         if (typeof this.modelStateChange_cbs[uid] === 'function') {
-                //             const historyStat = this.checkModelHistoryState(uid)
-                //             if (historyStat) {
-                //                 this.modelStateChange_cbs[uid]({ complete: true, uid })
-                //                 this.clearStateData(uid)
-                //             }
-                //         }
-                //     }
-                // }
-
                 // for user output only
                 if (typeof this.onModelStateChange_cb === 'function') {
                     this.onModelStateChange_cb(uid, cloneDeep(model))
@@ -90,7 +72,7 @@ module.exports = (notify, PayloadResolutioManager) => {
 
             const EventDispatcher = require('./prm.EventDispatcher')()
             this._EventDispatcher = new EventDispatcher(this.debug)
-            return this._batchReadyV2
+            return this._EventDispatcher
         }
 
         get PrmProto() {
@@ -99,28 +81,6 @@ module.exports = (notify, PayloadResolutioManager) => {
             return this._PrmProto
         }
 
-        clearStateData(uid) {
-            delete this.modelStateChangeHistory[uid]
-            delete this.modelStateChange_cbs[uid]
-            delete this.resolutionINDEX[uid]
-            if (this.debug) notify.ulog(`[clearStateData] state data cleared`)
-        }
-
-        /**
-         * @checkModelHistoryState
-         * filter out true or false if anyone model for each jobs is complete
-         */
-        // checkModelHistoryState(uid) {
-        //     if (!this.modelStateChangeHistory[uid]) return false
-        //     // if any collected
-        //     return this.modelStateChangeHistory[uid].filter(model => {
-        //         return model.complete
-        //     }).length > 0
-        // }
-        /**
-         * TODO
-         * - add another callback listener to execute lazy batchReady when all dataItems are complete
-         */
         /**
          * @onModelStateChange
          * listen for PromProto changes on each job dataSet
@@ -129,52 +89,18 @@ module.exports = (notify, PayloadResolutioManager) => {
          * cb: cb(uid, PrmProto)
          */
         onModelStateChange(cb) {
-            const notSet = this.onlyCompleteJob === true && this.batch
-            if (!notSet) {
-                this.onModelStateChange_cb = cb
-                // alert onModel lazy change that callback is available
-                this.nextDispatch.next({ event: 'onModelStateChange' })
-            }
+            // const notSet = this.onlyCompleteJob === true && this.batch
+            // if (!notSet) {
+            this.onModelStateChange_cb = cb
+            // alert onModel lazy change that callback is available
+            this.nextDispatch.next({ event: 'onModelStateChange' })
+            // }
 
             return this
         }
 
-        /**
-         * @incrementResolutionCalls
-         * count how many times resolution was called, and initiate callback to `batchReady`
-         * - only if `onlyCompleteJob` is set
-         * @param {*} uid
-         */
-        // incrementResolutionCalls(uid) {
-        //     if (this.onlyCompleteJob && this.batch) {
-        //         // console.log('set incrementResolutionCalls', uid)
-        //         if (this.resolutionINDEX[uid] !== undefined) {
-        //             this.resolutionINDEX[uid]++
-        //         } else {
-        //             this.resolutionINDEX[uid] = 1
-        //         }
-        //         if (typeof this.resolutionINDEX_cb === 'function') {
-        //             this.resolutionINDEX_cb(uid)
-        //             console.log('callback for ', uid)
-        //         }
-        //     }
-        // }
-
         get simpleDispatch() {
             return new SimpleDispatch().dispatch
-        }
-
-        /**
-         * @dispatcher
-         * collect all dispatchers so not are anonumous
-         * @param {*} uid
-         * @param {*} cb
-         */
-        dispatcher(uid, cb) {
-            if (!this._dspch[uid]) {
-                this._dspch[uid] = new this.simpleDispatch(uid, cb)
-            }
-            return this._dspch[uid]
         }
 
         /**

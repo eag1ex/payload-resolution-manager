@@ -14,6 +14,7 @@ const options = {
     resSelf: true, // allow chaning multiple resolution
     autoComplete: true // auto set complete on every compute iteration within `each` call
 }
+
 const debug = true
 const prm = new PRM(debug, options)
 var job50 = 'job_50'
@@ -100,7 +101,7 @@ var delayedJob = (() => {
     })
 })()
 
-prm.batchReady([job50, job60, job70], 'flat', d => {
+prm.batchReady([job50, job70, job60], 'grouped', d => {
     notify.ulog({ batch: d, message: 'delayed results' })
     // NOTE PRM instance cache should be now be cleared/reset
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })

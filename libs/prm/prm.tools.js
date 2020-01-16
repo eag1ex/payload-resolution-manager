@@ -1,10 +1,9 @@
-module.exports = (notify, BatchCallbacks) => {
+module.exports = (notify) => {
     if (!notify) notify = require('../notifications')(notify)
     const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
     const XPromise = require('../xpromise/x.promise')(notify)
-    class PRMTOOLS extends BatchCallbacks {
+    class PRMTOOLS {
         constructor(debug, opts) {
-            super(debug, opts)
             this.debug = debug
             // PRMTOOLS
             this._fromRI = null

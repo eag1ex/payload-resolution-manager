@@ -159,7 +159,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 
 * `complete(uid)` : marks each PrmProto object as `complete`
 
-* `onModelStateChange(cb=>)` : callback to changes per each job item status change
+* `onModelStateChange(cb=>)` : observes changes to each PrmProto job model, on the callback, only returns if new state differs from previous state.
 
 * `batchReady(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
      - `jobUIDS` :specify working job uids

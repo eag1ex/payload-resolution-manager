@@ -157,7 +157,7 @@ module.exports = (notify) => {
                                     // NOTE only initiate callback when `dataSet` already exists
                                     if (readySet) {
                                         const newChange = self.modelStateHistory(m, m._uid)
-                                        self.modelStateChange_CB(m._uid, m)
+                                        if (newChange) self.modelStateChange_CB(m._uid, m)
                                     }
                                 }
                             }

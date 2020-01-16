@@ -42,30 +42,8 @@ const APP_PROJECT = () => {
     const AppProject = require('./app.project.example/app')()
     new AppProject(false)
 }
-//APP_PROJECT()
+APP_PROJECT()
 //const completionExample = require('./app.completion.example')
 //const asyncExample = require('./app.async.example')
 //const mixedExample = require('./app.example')
 
-
-
-// test new dispatch
-const EventDispatcher = require('../libs/prm/prm.EventDispatcher')()
-
-const Env = new EventDispatcher()
-Env.initListener('test', (d, id) => {  
-})
-Env.initListener('test2', (d, id) => {  
-})
-
-
-Env.next('test',{ data: 2 })
-
-Env.batchReady('test', (d,id) => {
-    console.log('batchReady1 cb', d, id)
-})
-Env.batchReady('test2', (d,id) => {
-    console.log('batchReady2 cb', d, id)
-})
-
-Env.next('test2',{ data: 3 })

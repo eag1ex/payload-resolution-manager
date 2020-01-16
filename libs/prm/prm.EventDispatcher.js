@@ -23,7 +23,7 @@ module.exports = (notify) => {
         next(uid, data = null) {
             if (this.dispatchInstance[uid]) {
                 this.dispatchInstance[uid].next(data)
-            } else notify.ulog(`dispatchInstance for uid ${uid} not available`, true)
+            } else notify.ulog({ message: `dispatchInstance for uid not available`, uid }, true)
             return this
         }
 
@@ -34,6 +34,7 @@ module.exports = (notify) => {
          * @param {*} cb
          */
         Dispatch(uid, cb = null) {
+            if (this.dispatchInstance[uid]) return this
             const self = this
             const D = function(uid, cb) {
                 this.uid = uid
@@ -88,7 +89,7 @@ module.exports = (notify) => {
             }
 
             if (!this.dispatchInstance[uid] && typeof cb === 'function') this.dispatchInstance[uid] = new D(uid, cb)
-            return this.dispatchInstance[uid]
+            return this
         }
 
         del(uid) {
@@ -116,7 +117,9 @@ module.exports = (notify) => {
                 return this
             }
             if (!this.dispatchInstance[id]) {
-                notify.ulog(`[batchReady] no dispatchInstance found, make sure Dispatch is called first`, true)
+                // this means batchReady was executed prior to `Dispatch`, because it has forward with next
+                // it will get executed anyway
+                this.Dispatch(id, (d) => {})
             }
             if (this.dispatchInstance[id]) this.dispatchInstance[id].next({ type: 'cb', cb })
             return this

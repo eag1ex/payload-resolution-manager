@@ -204,7 +204,7 @@ module.exports = () => {
 
             // receive final callback on batch/id listed jobs
             this.prm.batchReady(['amazon', 'google', 'microsoft', 'warren-buffett'], 'grouped', (d) => {
-                notify.ulog({ message: 'batchReady', d })
+                notify.ulog({ message: 'batchReady for clients', d })
             })
 
             // NOTE we still have 1 `john-doe`client that we didnt charge
@@ -247,11 +247,10 @@ module.exports = () => {
                     notify.ulog({ message: '-- transaction made', client: 'john-doe', d: z })
                 }, 'john-doe')
 
-            // NOTE perhaps john-doe is a special client of the BANK, we can do final batch since resolution
-            // for both has already been set!
+            // NOTE perhaps john-doe is a special client of the BANK, we can do final batch together, since resolution for both has already been set!
 
-            this.prm.batchReady(['ICBC'], 'grouped', (d) => {
-                notify.ulog({ message: 'batchReady for bank', d })
+            this.prm.batchReady(['ICBC', 'john-doe'], 'grouped', (d) => {
+                notify.ulog({ message: 'batchReady for bank and client', d })
             })
 
             // all done
