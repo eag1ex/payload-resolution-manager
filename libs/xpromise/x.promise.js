@@ -399,6 +399,7 @@ module.exports = (notify) => {
                 else {
                     return this.ps[uid].p.then(z => {
                         this.delete(uid, true)
+                        console.log('aspromise', z)
                         this._initiatePiping(uid, true, z, allowPipe) // conditionally enable piping
                         return Promise.resolve(z)
                     }, err => {

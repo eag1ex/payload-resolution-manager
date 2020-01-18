@@ -130,7 +130,7 @@ module.exports = () => {
             for (var i = 0; i < clientList.length; i++) {
                 const uid = clientList[i]
                 // NOTE we only have one array for each client, grab first
-                const { dataSet } = head(this.prm.getSet(uid))
+                const { dataSet } = head(this.prm.get(uid))
                 clientData.push(dataSet)
             }
             return { clientData }
@@ -156,7 +156,7 @@ module.exports = () => {
                         head(d).dataSet.value = head(d).dataSet.value + fee
 
                         // update own client balance to mirrow the bank
-                        this.prm.updateDataSet(client.id, 0, client)
+                        this.prm.updateSet(client.id, 0, client)
                     })
                     return d
                 }, 'all')
@@ -199,7 +199,7 @@ module.exports = () => {
 
             // or as promise
             // .pipe(null, 'CCBC').then(z => {
-            //     console.log('getSet promise', this.prm.getSet())
+            //     console.log('get promise', this.prm.get())
             // })
 
             // receive final callback on batch/id listed jobs
@@ -215,7 +215,7 @@ module.exports = () => {
                     const clientID = `john-doe`
 
                     await this.prm.async(clientID)
-                    const { dataSet } = head(this.prm.getSet(clientID))
+                    const { dataSet } = head(this.prm.get(clientID))
 
                     const { amount, fee } = this.fee(dataSet.balance, this.charge)
                     dataSet.balance = amount
@@ -224,7 +224,7 @@ module.exports = () => {
                     const { clients } = head(d).dataSet
                     head(d).dataSet.clients = [].concat(clients, dataSet)
                     head(d).dataSet.value = head(d).dataSet.value + fee
-                    this.prm.updateDataSet(clientID, 0, dataSet)
+                    this.prm.updateSet(clientID, 0, dataSet)
 
                     return d
                 }, 'all')

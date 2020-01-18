@@ -8,7 +8,7 @@
  * you make an async change to your data and it will be piped down as promise to the next pipe when resolved, and so on..
  * when `opts.asAsync=true` is set you can also override pipe=false, by setting to false and will not be piped for that method, per below
  *
- * NOTE pipe feature is not set for `getSet()` because of prototype set and get updates, you can only use it within a pipe, example pipe(()=>{ prm.getSet(uid) })
+ * NOTE pipe feature is not set for `get()` because of prototype set and get updates, you can only use it within a pipe, example pipe(()=>{ prm.get(uid) })
 */
 module.exports = (PRM, notify) => {
     if (!notify) notify = require('../notifications')()
@@ -196,25 +196,25 @@ module.exports = (PRM, notify) => {
             return this
         }
 
-        updateSet(newData, uid, pipe = true) {
-            if (!this.asAsync) return super.updateSet(newData, uid)
-            if (!pipe) return super.updateSet(newData, uid)
+        updateJob(newData, uid, pipe = true) {
+            if (!this.asAsync) return super.updateJob(newData, uid)
+            if (!pipe) return super.updateJob(newData, uid)
 
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
             this.valUID(uid)
             this.pipe(async(d) => {
                 var dd = await newData
-                super.updateSet(dd, uid)
+                super.updateJob(dd, uid)
                 return this.d
             }, uid)
 
             return this
         }
 
-        updateDataSet(uid, ri, dataSet, type, pipe = true) {
-            if (!this.asAsync) return super.updateSet(uid, ri, dataSet, type)
-            if (!pipe) return super.updateSet(uid, ri, dataSet, type)
+        updateSet(uid, ri, dataSet, type, pipe = true) {
+            if (!this.asAsync) return super.updateJob(uid, ri, dataSet, type)
+            if (!pipe) return super.updateJob(uid, ri, dataSet, type)
 
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
@@ -222,7 +222,7 @@ module.exports = (PRM, notify) => {
 
             this.pipe(async(d) => {
                 var dd = await dataSet
-                super.updateDataSet(uid, ri, dd, type)
+                super.updateSet(uid, ri, dd, type)
                 return this.d
             }, uid)
             return this

@@ -149,7 +149,7 @@ module.exports = (notify) => {
             }
 
             this.d = this.setRequestPayload(data, uid)
-                .getSet(uid) // return item dataSet[...]
+                .get(uid) // return item dataSet[...]
 
             // this.d = this.loopAssingMod(this.d)
 
@@ -158,13 +158,13 @@ module.exports = (notify) => {
         }
 
         /**
-         * @updateDataSet
+         * @updateSet
          * - update dataSet target by `_ri`
          * `_ri` must be a number, starts from 0
          * `newDataSet` :  data you want to include in your updated dataSet example: {name, age}, or, can be any value
          * `type` : merge > you want to merge old with new , new> you want to replace the orl
          */
-        updateDataSet(uid, _ri, newDataSet = null, type = 'new') {
+        updateSet(uid, _ri, newDataSet = null, type = 'new') {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
             this.valUID(uid)
@@ -180,12 +180,12 @@ module.exports = (notify) => {
             }
 
             if (_ri === undefined) {
-                if (this.debug) notify.ulog('[updateDataSet] _ri must be a number', true)
+                if (this.debug) notify.ulog('[updateSet] _ri must be a number', true)
                 return this
             }
 
             if (!isNum(_ri)) {
-                if (this.debug) notify.ulog('[updateDataSet] _ri must be a number', true)
+                if (this.debug) notify.ulog('[updateSet] _ri must be a number', true)
             }
 
             if (newDataSet === null) {
@@ -193,11 +193,11 @@ module.exports = (notify) => {
             }
 
             if (!this.dataArch[uid]) {
-                if (this.debug) notify.ulog('[updateDataSet] uid doesnt exist', true)
+                if (this.debug) notify.ulog('[updateSet] uid doesnt exist', true)
                 return this
             }
             if (this.dataArchSealed[uid]) {
-                if (this.debug) notify.ulog('[updateDataSet] data already sealed cannot update', true)
+                if (this.debug) notify.ulog('[updateSet] data already sealed cannot update', true)
                 return this
             }
 
@@ -221,19 +221,19 @@ module.exports = (notify) => {
             }
 
             if (!updated) {
-                if (this.debug) notify.ulog('[updateDataSet] nothing updated, ri match not found', true)
+                if (this.debug) notify.ulog('[updateSet] nothing updated, ri match not found', true)
             }
 
             return this
         }
 
         /**
-         * @updateSet
+         * @updateJob
          * update itemDataSet only, if previously set by `set` !
          * does not grow item, only preplace with new data
-         * `newData` must provide raw data returned from `set` or use `getSet(uid)` and return it here
+         * `newData` must provide raw data returned from `set` or use `get(uid)` and return it here
          */
-        updateSet(newData, uid) {
+        updateJob(newData, uid) {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
 
@@ -1028,11 +1028,11 @@ module.exports = (notify) => {
         }
 
         /**
-         * @getSet
+         * @get
          * `uid` must provide uid
-         * `_self`  optional, if set specify `getSet.d` to return items data
+         * `_self`  optional, if set specify `get.d` to return items data
          */
-        getSet(uid, _self) {
+        get(uid, _self) {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
 
@@ -1053,7 +1053,7 @@ module.exports = (notify) => {
             if (!_self) {
                 return cloneDeep(this.dataArch[uid])
             } else {
-                notify.ulog({ message: '[getSet] warning you cannot retrieve this items data, as it is not available', uid }, true)
+                notify.ulog({ message: '[get] warning you cannot retrieve this items data, as it is not available', uid }, true)
             }
             return null
         }

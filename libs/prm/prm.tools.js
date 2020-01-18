@@ -78,6 +78,9 @@ module.exports = (notify) => {
                 })
             }
         }
+        endPipe() {
+
+        }
 
         /**
          * @of

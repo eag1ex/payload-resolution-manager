@@ -152,10 +152,10 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 
 * `markDone(uid:String)`: Provide after any `set`, and will make sure no other changes are allowed to this job - any subsequent calls will be ignored.
 
-* `updateDataSet(uid,_ri, newDataSet,type)` : update job, targted via `_ri` together with `uid` 
+* `updateSet(uid,_ri, newDataSet,type)` : update job, targted via `_ri` together with `uid` 
      - `newDataSet` can be any data, example: {},[],1,true, except for null
      - `type:string`: can specify `merge` or `new`. Best to do your own merging if its a large nested object, or array.
-* `updateSet(newData,uid)` : provide raw data produced by `set` or use `getSet(uid)` to return it. Will update only dataSet[..], will not grow the items array.
+* `updateJob(newData,uid)` : provide raw data produced by `set` or use `get(uid)` to return it. Will update only dataSet[..], will not grow the items array.
 
 * `complete(uid)` : marks each PrmProto object as `complete`
 
@@ -174,8 +174,8 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
      - `callback(item=>)`: returns all items from `uid`, by default 1 callback with `method=all` will be initiated. Make changes and return all new items (must provide same size). When `method=each` will loop thru each item sequently,  must return 1 item. If you do not know your uid and want to use `each`, you must set `this.itemDataSet` to update callback, for clear explanation, take a look at examples in `./examples/index.js`
      - `uid`: provide for data if not chaining, or switching to another job. When `uid`=null it will look for last used. If anonymous, because your data was async, must provide `formated()` > with {dataSet[],_uid,_ri} so it can search thru and match available. 
      - `tools`: compute works best with these tools: `of, from, filter, tap`, so you can make changes only to those dataSets without altering rest of job data.
-* `getSet(uid,self:boolean)`:  return data for desired `uid` in formated state.
-     - `self:true`: you can chain this method. Then you must provide: getSet(...).d  to return it.
+* `get(uid,self:boolean)`:  return data for desired `uid` in formated state.
+     - `self:true`: you can chain this method. Then you must provide: get(...).d  to return it.
 
 * `formated(data[...], uid, external, clean)` : for some reason you want to make sure your data is correct. Provide job[...] as previously initialized with `set`. Does not update or change any internal class states.
      - `external:boolean` If its an external data that is not yet available in the class, will ignore validation.
