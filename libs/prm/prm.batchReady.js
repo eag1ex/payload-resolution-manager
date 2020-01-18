@@ -9,6 +9,8 @@ module.exports = (notify, PRM) => {
     class PrmBatchReady extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
+
+            this.batchReady_set = {}// track all batchReady so we dont call same one by excident
         }
 
         /**
@@ -24,13 +26,19 @@ module.exports = (notify, PRM) => {
             if (!this.batch) return null
             if (!isArray(jobUIDS)) return null
             if (!jobUIDS.length) return null
+            const uidRef = jobUIDS.toString().replace(/,/g, '--')
+
+            if (this.batchReady_set[uidRef] === true) {
+                if (this.debug) notify.ulog({ message: `[batchReady] already set to call this batch, call ignored`, jobUIDS })
+                return null
+            } else this.batchReady_set[uidRef] = true
 
             const _jobUIDS = uniq(jobUIDS)
             if (_jobUIDS.length !== jobUIDS.length) {
                 jobUIDS = uniq(jobUIDS)
                 notify.ulog(`[batchReady] you provided duplicate ids in your batch, please fix it, error has been corrected`, true)
             }
-            const uidRef = jobUIDS.toString().replace(/,/g, '--')
+
             var alreadyDone = {}
             if (!type) type = 'flat' // set default
 
@@ -105,10 +113,8 @@ module.exports = (notify, PRM) => {
                     // NOTE when job is forfilled only then set it!
                     if (this.strictMode) this.jobUID_history[jobUIDS[inx]] = true
                     this.eventDispatcher.del(jobUIDS[inx])
-
                 })
                 purgeBatchDataArch()
-               
             }
 
             if (typeof doneCB === 'function') {
