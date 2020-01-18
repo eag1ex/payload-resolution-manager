@@ -39,7 +39,7 @@ var d = prm.set(d1, job50)
         //  item.complete = true // because we set an option for `onlyCompleteSet` we have to set when we are ready, otherwise `resolution` will not return this change and data will still exist
         return item
     }, 'each')
-// .markDone() // no future changes are allowed to `job_50`
+    // .markDone() // no future changes are allowed to `job_50`
     .set(d1, job60)
     .compute(items => {
         var allNewItems = items.map((zz, inx) => {
@@ -58,15 +58,17 @@ var d = prm.set(d1, job50)
         // make more changes to job_50, starting from `_ri` index
         return item
     }, 'each')
-// .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
-    .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
-    /**
-     * if you prefer to return each resolution seperatry:
-     * var d1 = prm.resolution(null,job50).d
-     * var d2 = prm.resolution(null,job60).d
-     */
+    //.complete(job60)
+    // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
+    .resolution(null, job60) // since last resolution was `job_60` this job will be returned first
 
-notify.ulog({ job60: d })
+/**
+ * if you prefer to return each resolution seperatry:
+ * var d1 = prm.resolution(null,job50).d
+ * var d2 = prm.resolution(null,job60).d
+ */
+
+//notify.ulog({ job60: d })
 
 /**
 * PRM Framework can handle delayed jobs very well
@@ -101,8 +103,14 @@ var delayedJob = (() => {
     })
 })()
 
-prm.batchReady([job50, job70, job60], 'grouped', d => {
-    notify.ulog({ batch: d, message: 'delayed results' })
+prm.batchReady([job50, job70], 'grouped', d => {
+    notify.ulog({ batch: d, message: 'batchReady results for [job50, job70]' })
+    // NOTE PRM instance cache should be now be cleared/reset
+    // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
+})
+
+prm.batchReady([job60], 'grouped', d => {
+    notify.ulog({ batch: d, message: 'batchReady results for [job60]' })
     // NOTE PRM instance cache should be now be cleared/reset
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
 })

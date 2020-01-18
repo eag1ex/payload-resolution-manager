@@ -101,10 +101,11 @@ module.exports = (PRM, notify) => {
         }
 
         complete(uid) {
-            if (!uid) uid = this.lastUID
-            else this.lastUID = uid
-            if (!this.asAsync) return this.complete(uid)
+            if (!this.asAsync) return super.complete(uid)
             else {
+                if (!uid) uid = this.lastUID
+                else this.lastUID = uid
+
                 this.pipe(async(d) => {
                     super.complete(uid)
                 }, uid)
