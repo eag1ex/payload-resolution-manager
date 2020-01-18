@@ -4,7 +4,7 @@
  */
 module.exports = (notify, PayloadResolutioManager) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isFunction, isArray, isString, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
+    const { isEmpty, isFunction, isArray, isString,uniq, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     const SimpleDispatch = require('./prm.simpleDispatch')(notify)
     class PRMHelpers extends PayloadResolutioManager {
@@ -47,6 +47,33 @@ module.exports = (notify, PayloadResolutioManager) => {
             })
 
             this.ProtoStateChange_set = true
+        }
+
+        /**
+         * @findID
+         * @params jobData # find cooresponding uniq id from jobData
+         */
+        findID(jobData) {
+            if (!isArray(jobData)) return null
+            const totalJobTimes = jobData.length
+            var allMustValid = 0
+            var uids = []
+            for (var i = 0; i < jobData.length; i++) {
+                const job = jobData[i]
+                if (this.validJobDataSet(job)) {
+                    allMustValid++
+                    uids.push(job._uid)
+                }
+            }
+
+            const ID = head((uniq(uids) || []))
+
+            if (allMustValid === totalJobTimes && ID) {
+                return ID
+            } else {
+                if (this.debug) notify.ulog(`[findID] no UNIQ ID found, or found more then one`, true)
+                return null
+            }
         }
 
         /**
@@ -366,7 +393,7 @@ module.exports = (notify, PayloadResolutioManager) => {
 
         /**
          * @validJobDataSet
-         * test `PRM` data attributes is valid
+         * test `PRM` data attributes is valid per dataSet object
          * return true/false
          */
         validJobDataSet(data) {

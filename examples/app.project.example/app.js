@@ -225,7 +225,7 @@ module.exports = () => {
                     head(d).dataSet.clients = [].concat(clients, dataSet)
                     head(d).dataSet.value = head(d).dataSet.value + fee
                     this.prm.updateSet(clientID, 0, dataSet)
-
+                    console.log('findID>', this.prm.findID(d))
                     return d
                 }, 'all')
                 .complete()
