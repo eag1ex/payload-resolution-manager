@@ -11,11 +11,11 @@ module.exports = (notify) => {
 
     const PRMTOOLS = require('./prm.tools')(notify)
     class PayloadResolutioManager extends PRMTOOLS {
-        constructor(debug, opts = {}) {
+        constructor(debug, settings = {}) {
             super(debug)
 
-            // NOTE setting PRM opts
-            this.optConfig(opts)
+            // NOTE setting PRM settings
+            this.optConfig(settings)
             // end
             this.resData = null// cache last resolution data
             this._jobUID_temp = []
@@ -51,33 +51,52 @@ module.exports = (notify) => {
             this.lastAsync = {} /// last async holds promise for each job that was passed as a promise, once  promise is resolved data is accesable, `lastAsync` is just a boolean, an indicator when data is ready, user needs to know if returning a promise, should pass in a callback, or resolve data first from `resolution.then(()=>...)`
         }
 
-        optConfig(opts) {
-            this.asAsync = opts.asAsync || null // to allow return of data as promise with implementation of `XPromise`
+        optConfig(settings) {
+            this.asAsync = settings.asAsync || null // to allow return of data as promise with implementation of `XPromise`
             // NOTE
             // if `hard` is set any invalid dataSet will be unset
             // if `soft` is set original dataSet will be kept
-            this.invalidType = opts.invalid || 'soft' // `soft` or `hard`
-            this.strictMode = opts.strictMode || null // makes sure that same jobs cannot be called again
-            this.batch = opts.batch || null
-            this.resSelf = opts.resSelf || null // if true resolution will return self instead of value
+            this.invalidType = settings.invalid || 'soft' // `soft` or `hard` sets validation for compute()
+            this.strictMode = settings.strictMode || null // makes sure that same jobs cannot be called again
+            this.batch = settings.batch || null
+            this.resSelf = settings.resSelf || null // if true resolution will return self instead of value
             /*
             NOTE
             `resolution` and `batchReady` is fulfilled if all dataSets marked `complete`, this option is more stricted as if does not reset variable scope if not completed as opose to `onlyCompleteSet`
             */
-            this.onlyCompleteJob = opts.onlyCompleteJob || null
+            this.onlyCompleteJob = settings.onlyCompleteJob || null
 
             // NOTE when set resolution will only resolve items that are marked as complete
-            this.onlyCompleteSet = opts.onlyCompleteSet || null
+            this.onlyCompleteSet = settings.onlyCompleteSet || null
             // when using batch onlyCompleteSet is reset, because we complete each job once a batch of jobs is all complete
-            this.autoComplete = opts.autoComplete || null // when set after performing compute for `each` every item iteration will automaticly be set with `complete`, when not set, you have to apply it each time inside every compute callback
+            this.autoComplete = settings.autoComplete || null // when set after performing compute for `each` every item iteration will automaticly be set with `complete`, when not set, you have to apply it each time inside every compute callback
 
-            // when piping we cannot chain `resolution(..)` method
+            // when asAsync===true we pipe original resolution value via `prm.async.extention.js` class
             if (this.asAsync) this.resSelf = null
 
             // NOTE onlyCompleteJob supress onlyCompleteSet
             if (this.onlyCompleteJob || (this.onlyCompleteJob && this.onlyCompleteSet)) {
                 this.onlyCompleteSet = null
             }
+
+            this._settings = {
+                onlyCompleteSet: this.onlyCompleteSet,
+                onlyCompleteJob: this.onlyCompleteJob,
+                resSelf: this.resSelf,
+                asAsync: this.asAsync,
+                batch: this.batch,
+                strictMode: this.strictMode,
+                invalidType: this.invalidType
+            }
+        }
+
+        /**
+         * @settings getter
+         * retrieve all initial PRM settings
+         * - read only
+         */
+        get settings() {
+            return this._settings
         }
 
         /**
@@ -1159,8 +1178,8 @@ module.exports = (notify) => {
     const PRMbatchReady = require('./prm.batchReady')(notify, PRMHelpers)
     const prmAsync = require('./prm.async.extention')(PRMbatchReady, notify)
     class PRMext extends prmAsync {
-        constructor(debug, opts) {
-            super(debug, opts)
+        constructor(debug, settings) {
+            super(debug, settings)
         }
     }
 

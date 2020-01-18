@@ -141,7 +141,7 @@ prm.batchReady([job50, job60, job70], 'flat', d => {
 * `set(data:Array,uid:String)`: Provide data as array, with `uid` > uniq identifier,
 this item will be saved by reference in class variable with `_ri` and `_uid`. You can provide concurent `set` for the same `uid` via chaining or by line.
 
-* PRM `opt` settings:
+* PRM `opt` settings: (prm.settings)
     - `asAsync`: will use `pipe(cb=>,uid)` strategy, each data is treated as async.
     - `onlyCompleteJob`: this feture becomes usefull if you only want to return data marked as `complete`, job data will exist untill all job items are complete, and then they will be removed. 
     - `onlyCompleteSet` : similar to `onlyCompleteJob`, except only any items marked complete will be returned, else will be discarted
