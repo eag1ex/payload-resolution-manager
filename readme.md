@@ -185,8 +185,10 @@ All data for each job is deleted at this poin, including pipe(()=>) sequence.
 * `delSet(uid, force:true)`:  manualy delete cache and history from the class, specify `force=true` to delete all data.
 
 ###### Beta Tools
+
 * `of(uid)`: chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` > to start tracking from this job
 * `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`. 
+* `only(ri:index)`: similar to from, but will only target 1 job specific index, and uid from previous selection
 
 ##### Example output:
 ```

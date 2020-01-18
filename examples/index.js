@@ -36,7 +36,7 @@ const examplesINIT = () => {
     // notify.ulog({ job_3 })
     notify.ulog({ job_1 })
 } // examplesINIT
-//examplesINIT()
+examplesINIT()
 
 const APP_PROJECT = () => {
     const AppProject = require('./app.project.example/app')()
@@ -45,5 +45,5 @@ const APP_PROJECT = () => {
 //APP_PROJECT()
 //const completionExample = require('./app.completion.example')
 //const asyncExample = require('./app.async.example')
-const mixedExample = require('./app.example')
+//const mixedExample = require('./app.example')
 

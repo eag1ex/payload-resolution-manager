@@ -12,6 +12,7 @@ module.exports = (PRM, exampleData, notify) => {
         .set(d2)
         .set(d3) // add data to this item
         // .set(exampleData(5), 'index11')
+        // .only(1)
         .compute(item => {
             // NOTE do some calculation for `each` item, must return 1 item
             // if (item._ri===0) // do something

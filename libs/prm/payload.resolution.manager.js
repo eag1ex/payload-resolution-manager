@@ -771,11 +771,12 @@ module.exports = (notify) => {
          * decide which `dataArch` index to return when using PRMTOOLS
          */
         dataArchWhich() {
-            const fromOK = this._fromRI !== undefined && this._fromRI !== null
+            const fromOK = this._fromRI !== null
+            const onlyOK = this._onlyRI !== null
             const ofOK = this.lastUID !== undefined && this.lastUID !== null
             const filterOK = this._lastFilteredArchData !== undefined && this._lastFilteredArchData !== null
 
-            if (!fromOK && !filterOK) {
+            if (!fromOK && !filterOK && !onlyOK) {
                 return this.dataArch[this.lastUID]
             }
 
@@ -801,7 +802,19 @@ module.exports = (notify) => {
                 })
             }
 
-            if (fromOK && ofOK && !filterOK) {
+            if (onlyOK && ofOK && !filterOK && !fromOK) {
+                var dataReduced = []
+                for (var i = 0; i < dataArch_copy.length; i++) {
+                    var job = dataArch_copy[i]
+                    if (!job) continue
+                    if (job._ri === this._onlyRI) {
+                        dataReduced.push(job)
+                    }
+                }
+                dataArch_copy = dataReduced
+            }
+
+            if (fromOK && ofOK && !filterOK && !onlyOK) {
                 var dataReduced = []
                 for (var i = 0; i < dataArch_copy.length; i++) {
                     var job = dataArch_copy[i]

@@ -7,6 +7,7 @@ module.exports = (notify) => {
             this.debug = debug
             // PRMTOOLS
             this._fromRI = null
+            this._onlyRI = null
             this._lastFilteredArchData = null
             this._xpromise = null
             this.pipeID = null
@@ -119,11 +120,32 @@ module.exports = (notify) => {
                 if (this.debug) notify.ulog(`[from] last uid not found, not sure where to start RI index`, true)
                 return this
             }
-
-            this._fromRI = _ri
+            this._onlyRI = null
+            this._fromRI = Number(_ri)
             return this
         }
 
+        /**
+         * @only
+         * * similar to from, but only from specific RI index
+         * @param {*} RI  must provide `_ri` index of data position
+         */
+        only(RI) {
+            if (RI === undefined || RI === null) return this
+            var _ri = Number(RI)
+            if (!isNumber(_ri)) {
+                if (this.debug) notify.ulog(`[only] RI must be a number, without decilams`, true)
+                return this
+            }
+
+            if (!this.lastUID) {
+                if (this.debug) notify.ulog(`[only] last uid not found, not sure where to start RI index`, true)
+                return this
+            }
+            this._fromRI = null
+            this._onlyRI = Number(_ri)
+            return this
+        }
         /**
          * @filter
          * an ordinary `filter` method returned as a callback(value,index, ri) ? true:false
@@ -144,12 +166,20 @@ module.exports = (notify) => {
 
             // set temporary data holder, extracted and reset via `dataArchWhich` method
             this._lastFilteredArchData = data.filter((val, index) => {
-                if (this._fromRI !== undefined) {
+                if (this._fromRI !== null) {
                     // if from was set filter only matching
                     if (!(val._ri >= this._fromRI)) {
                         return false
                     }
                 }
+
+                if (this._onlyRI !== null) {
+                    // if only was set filter only matching
+                    if (val._ri !== this._onlyRI) {
+                        return false
+                    }
+                }
+
                 var v
                 try {
                     v = cb(val, index)
