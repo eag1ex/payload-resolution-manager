@@ -162,6 +162,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
 * `onModelStateChange(cb=>)` : observes changes to each PrmProto job model, on the callback, only returns if new state differs from previous state.
 
 * `batchReady(jobUIDS=[], type:string, cb=>)`: You want to wait until specific jobs has completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are ready.
+All data for each job is deleted at this poin, including pipe(()=>) sequence.    
      - `jobUIDS` :specify working job uids
      - `type`: can return as `flat`> array, or `grouped`> object
      - `cb:` when ready returns callback

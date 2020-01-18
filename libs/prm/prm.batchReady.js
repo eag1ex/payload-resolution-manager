@@ -93,6 +93,11 @@ module.exports = (notify, PRM) => {
                 var r = performResolution()
 
                 if (r === null) return
+                // delete xpromise/pipe data for each each job, and stop pipe sequence
+                times(jobUIDS.length, (inx) => {
+                    this.endPipe(jobUIDS[inx])
+                })
+
                 doneCB(r)
                 alreadyDone[uidRef] = true
                 times(jobUIDS.length, (inx) => {
@@ -100,8 +105,10 @@ module.exports = (notify, PRM) => {
                     // NOTE when job is forfilled only then set it!
                     if (this.strictMode) this.jobUID_history[jobUIDS[inx]] = true
                     this.eventDispatcher.del(jobUIDS[inx])
+
                 })
                 purgeBatchDataArch()
+               
             }
 
             if (typeof doneCB === 'function') {

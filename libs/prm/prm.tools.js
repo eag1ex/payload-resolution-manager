@@ -78,8 +78,10 @@ module.exports = (notify) => {
                 })
             }
         }
-        endPipe() {
-
+        endPipe(id) {
+            if (!id) id = this.lastUID
+            this.xpromise.end(id)
+            return this
         }
 
         /**

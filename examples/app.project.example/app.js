@@ -248,9 +248,15 @@ module.exports = () => {
                 }, 'john-doe')
 
             // NOTE perhaps john-doe is a special client of the BANK, we can do final batch together, since resolution for both has already been set!
-
+              
             this.prm.batchReady(['ICBC', 'john-doe'], 'grouped', (d) => {
                 notify.ulog({ message: 'batchReady for bank and client', d })
+
+                // NOTE no longer can pipe at this point 
+                // this.prm.pipe(z => {
+                //     // also this.prm.resData
+                //     console.log('hello pipe???')
+                // }, 'john-doe')
             })
 
             // all done
