@@ -8,6 +8,7 @@
     - Sorting DATA at different states
     - Referencing and assesing jobs status
     - Validating results
+    - filtering job data by value or index, with the help of prm tools/ and prm Query
     - returning async/ defered data
     - munipulating independant jobs
 
@@ -189,6 +190,7 @@ All data for each job is deleted at this poin, including pipe(()=>) sequence.
 * `of(uid)`: chaining multiple jobs, example: `a,b,c` `prm.of(uid:c)` > to start tracking from this job
 * `from(ri:index)` : will return items starting from that index when using `compute`, based of last `uid`, all other dataSets, part of this job will still return in `resolution`. 
 * `only(ri:index)`: similar to from, but will only target 1 job specific index, and uid from previous selection
+* `range(fromRI:index,toRI:index)`: select range to compute from dataSet of current job, via RI index position.. ` dataSet[0]._ri===fromRI ... toRI etc`
 
 ##### Example output:
 ```

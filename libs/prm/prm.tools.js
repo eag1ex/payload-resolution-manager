@@ -1,13 +1,12 @@
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')(notify)
-    const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
+    const { reduce, isNumber, isFunction, cloneDeep, isEmpty, isArray, toArray, flatMap, isObject, head, indexOf, isString, isUndefined } = require('lodash')
     const XPromise = require('../xpromise/x.promise')(notify)
     class PRMTOOLS {
         constructor(debug, opts) {
             this.debug = debug
             // PRMTOOLS
-            this._fromRI = null
-            this._onlyRI = null
+            this._Query = {}
             this._lastFilteredArchData = null
             this._xpromise = null
             this.pipeID = null
@@ -99,6 +98,7 @@ module.exports = (notify) => {
                 return this
             }
             this.lastUID = UID
+            this.Query = Object.assign({}, this.Query, { of: { value: UID, timestamp: this.timestamp() } })
             return this
         }
 
@@ -120,8 +120,7 @@ module.exports = (notify) => {
                 if (this.debug) notify.ulog(`[from] last uid not found, not sure where to start RI index`, true)
                 return this
             }
-            this._onlyRI = null
-            this._fromRI = Number(_ri)
+            this.Query = Object.assign({}, this.Query, { from: { value: _ri, timestamp: this.timestamp() } })
             return this
         }
 
@@ -142,8 +141,8 @@ module.exports = (notify) => {
                 if (this.debug) notify.ulog(`[only] last uid not found, not sure where to start RI index`, true)
                 return this
             }
-            this._fromRI = null
-            this._onlyRI = Number(_ri)
+
+            this.Query = Object.assign({}, this.Query, { only: { value: Number(_ri), timestamp: this.timestamp() } })
             return this
         }
         /**
@@ -165,20 +164,20 @@ module.exports = (notify) => {
             if (!isArray(data)) return this
 
             // set temporary data holder, extracted and reset via `dataArchWhich` method
-            this._lastFilteredArchData = data.filter((val, index) => {
-                if (this._fromRI !== null) {
-                    // if from was set filter only matching
-                    if (!(val._ri >= this._fromRI)) {
-                        return false
-                    }
-                }
+            var filtered = data.filter((val, index) => {
+                // if (this._fromRI !== null) {
+                //     // if from was set filter only matching
+                //     if (!(val._ri >= this._fromRI)) {
+                //         return false
+                //     }
+                // }
 
-                if (this._onlyRI !== null) {
-                    // if only was set filter only matching
-                    if (val._ri !== this._onlyRI) {
-                        return false
-                    }
-                }
+                // if (this._onlyRI !== null) {
+                //     // if only was set filter only matching
+                //     if (val._ri !== this._onlyRI) {
+                //         return false
+                //     }
+                // }
 
                 var v
                 try {
@@ -189,10 +188,45 @@ module.exports = (notify) => {
                 }
                 return v || false
             })
-
+            filtered = filtered.map(z => z._ri)
+            this.Query = Object.assign({}, this.Query, { filter: { value: filtered, timestamp: this.timestamp() } })
             return this
         }
 
+        /**
+         * @range
+         * select dataSets within range, will use lastUID from previous selection
+         * at least one range is required
+         * @param {*} fromRI  if fromRI not set, will default to {0}
+         * @param {*} toRIif if toRIif not set, will default to total size of current job
+         */
+        range(fromRI, toRI) {
+            if (!this.lastUID) return this
+
+            if (!isNumber(fromRI) && !isNumber(toRI)) {
+                if (this.debug) notify.ulog(`[range] ri from/to, at least 1 range index must be set`)
+                return this
+            }
+
+            if (!isNumber(fromRI)) {
+                fromRI = 0
+            }
+            if (!isNumber(toRI)) {
+                toRI = Math.max.apply(null, this.resIndex[this.lastUID])
+            }
+
+            if (!isNumber(fromRI) || !isNumber(toRI)) {
+                if (this.debug) notify.ulog(`[range] ri from/to must be a number`)
+                return this
+            }
+            if (fromRI - toRI > 0) {
+                if (this.debug) notify.ulog(`[range] from/to ri must be in accending order from<to, nothing done`, true)
+                return this
+            }
+
+            this.Query = Object.assign({}, this.Query, { range: { value: [fromRI, toRI], timestamp: this.timestamp() } })
+            return this
+        }
         /**
          * @complete
          * mark job data as complete for all dataSets

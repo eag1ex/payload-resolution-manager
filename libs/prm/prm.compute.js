@@ -638,8 +638,7 @@ module.exports = (notify, PRM) => {
             if (this.strictJob(uid) === true) {
                 return false
             }
-            var originalFormat = this.dataArchWhich(uid) // this.grab_ref[uid]
-
+            var originalFormat = this.dataArchWhich() // this.grab_ref[uid]
             if (isEmpty(originalFormat)) {
                 return false
             }

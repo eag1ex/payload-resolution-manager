@@ -4,7 +4,7 @@
  */
 module.exports = (notify, PayloadResolutioManager) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isFunction, isArray, isString,uniq, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
+    const { isEmpty, isFunction, isArray, isString, uniq, flatMap, toArray, indexOf, isNumber, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     const SimpleDispatch = require('./prm.simpleDispatch')(notify)
     class PRMHelpers extends PayloadResolutioManager {
@@ -50,6 +50,284 @@ module.exports = (notify, PayloadResolutioManager) => {
         }
 
         /**
+         * @QueryOrderedValuesArr
+         * @param obj Query Object
+         * @param order sorting order
+         * sort by timestamp, so we update latest value first, this will purge the old values
+         */
+        QueryOrderedValuesArr(obj, order = 'latest') {
+            var r = reduce(cloneDeep(obj), (n, el, k) => {
+                n.push({ [k]: { value: el.value, timestamp: el.timestamp } })
+                return n
+            }, []).filter(z => !!flatMap(toArray(z))[0])
+
+            if (order === 'latest') {
+                // sort by oldest timestamp
+                r.sort((a, b) => flatMap(toArray(b))[0].timestamp - flatMap(toArray(a))[0].timestamp)
+            }
+            if (order === 'oldest') {
+                // sort by oldest timestamp as first
+                r.sort((a, b) => flatMap(toArray(a))[0].timestamp - flatMap(toArray(b))[0].timestamp)
+            }
+            return r
+        }
+
+        get QueryExpressions() {
+            return ['of', 'from', 'only', 'filter', 'range']
+        }
+
+        /**
+         * @Query
+         * filter query for tools Kit: of, from, only, filter
+         * - can combine with filter
+         */
+        set Query(obj) {
+            if (isEmpty(obj)) {
+                this._Query = {}
+                return
+            }
+            if (!isObject(obj) || isArray(obj) || isString(obj) || isNumber(obj)) {
+                notify.ulog(`[Query] obj must be an object`, true)
+                return
+            }
+            // on empty reset query just in case
+
+            const validExpressions = this.QueryExpressions
+
+            var expressions = Object.keys(obj)
+            var invalids = []
+            var testValid = expressions.filter(z => {
+                const v = indexOf(validExpressions, z) !== -1
+                if (!v) invalids.push(v)
+                return v
+            }).length === expressions.length
+
+            if (!testValid) {
+                notify.ulog({ message: `[Query] expressions not valid, nothing set!`, invalids }, true)
+                return
+            }
+
+            /**
+             * @forSwitch
+             * never set any objs here, only work with provided objs
+             */
+            const forSwitch = (each) => {
+                switch (each) {
+                    case 'of':
+                        if (isUndefined(obj.of.value)) {
+                            break
+                        }
+
+                        if (!isString(obj.of.value)) {
+                            if (this.debug) notify.ulog(`obj.of.value must be a string, not set`, true)
+                            delete obj.of
+                        }
+                        // of what uid or use lastUID
+                        // code block
+                        break
+
+                    case 'from': // ri index
+                        if (isUndefined(obj.from.value)) {
+                            break
+                        }
+
+                        if (!isNumber(obj.from.value) || obj.from.value < 0) {
+                            if (this.debug) notify.ulog(`obj.from.value must be a number 0>=, not set`, true)
+                            delete obj.from
+                            break
+                        }
+
+                        delete obj.range
+                        delete obj.only
+
+                        break
+
+                    case 'only': // ri index
+                        if (isUndefined(obj.only.value)) {
+                            break
+                        }
+
+                        if (!isNumber(obj.only.value) || obj.only.value < 0) {
+                            if (this.debug) notify.ulog(`obj.only.value must be a number 0>=, not set`, true)
+                            delete obj.only
+                            break
+                        }
+
+                        delete obj.from
+                        delete obj.range
+                        // console.log('only was set')
+                        // code block
+                        break
+
+                    case 'range': // ri index
+                        if (isUndefined(obj.range.value)) {
+                            break
+                        }
+
+                        if (!isArray(obj.range.value)) {
+                            if (this.debug) notify.ulog(`obj.range.value must be an array [fromIndex, toIndex], not set. -1-`, true)
+                            delete obj.range
+                            break
+                        }
+                        // range must be [from, to] index
+                        var rangeNotNum = obj.range.value.filter(z => isNumber(z)).length !== 2
+                        if (rangeNotNum) {
+                            if (this.debug) notify.ulog(`obj.range.value must be an array [fromIndex, toIndex], not set. -2-`, true)
+                            delete obj.range
+                            break
+                        }
+                        var testRangeobj = obj.range.value[0] - obj.range.value[1]
+                        if (testRangeobj > 0) {
+                            if (this.debug) notify.ulog(`obj.range.value, fromIndex must be lesser then toIndex, not set`, true)
+                            delete obj.range
+                            break
+                        }
+
+                        delete obj.from
+                        delete obj.only
+                        // code block
+                        break
+
+                    case 'filter':
+                        if (isUndefined(obj.filter.value)) {
+                            break
+                        }
+
+                        if (!isArray(obj.filter.value)) {
+                            if (this.debug) notify.ulog(`obj.filter.value, must be an array, not set`, true)
+                            delete obj.filter
+                            break
+                        }
+
+                        if (!obj.filter.value.length) {
+                            delete obj.filter
+                        }
+
+                        // if other queries available, only one setting should be set for `_ri` index
+                        // code block
+                        break
+
+                    default:
+                        if (this.debug) notify.ulog(`[forSwitch][default] no Query matched, nothig produced`)
+                        obj = {}
+                    // code block
+                }
+            }
+            // NOTE we sort the order of the Query from the last to the first
+            const orderedObjValuesArr = this.QueryOrderedValuesArr(obj, 'latest')
+
+            for (var i = 0; i < orderedObjValuesArr.length; i++) {
+                // NOTE obj is updated on each cycle
+                const topKey = Object.keys(orderedObjValuesArr[i])[0]
+                if (!topKey) continue
+                if (obj[topKey]) forSwitch(topKey)
+            }
+
+            this._Query = obj
+        }
+        get Query() {
+            return this._Query
+        }
+
+        /**
+         * @dataArchWhich
+         * decide which `dataArch` index to return when using PRMTOOLS
+         */
+        dataArchWhich() {
+            if (isEmpty(this.Query)) {
+                return this.dataArch[this.lastUID]
+            }
+
+            var dataArch_copy = cloneDeep(this.dataArch)
+
+            const forSwitch = (each) => {
+                // could happen if we never called of to set `this.lastUID`
+                if (!this.Query.of && this.lastUID && !isEmpty(dataArch_copy)) {
+                    // if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
+                    if (dataArch_copy[this.lastUID]) {
+                        dataArch_copy = dataArch_copy[this.lastUID]
+                    }
+                }
+
+                switch (each) {
+                    case 'of':
+                        dataArch_copy = dataArch_copy[this.Query.of.value]
+                        break
+                    case 'only':
+
+                        var dataReduced = []
+                        for (var i = 0; i < dataArch_copy.length; i++) {
+                            var job = dataArch_copy[i]
+                            if (!job) continue
+                            if (job._ri === this.Query.only.value) {
+                                dataReduced.push(job)
+                            }
+                        }
+                        dataArch_copy = dataReduced
+                        break
+                    case 'range':
+
+                        var dataReduced = []
+                        for (var i = 0; i < dataArch_copy.length; i++) {
+                            var job = dataArch_copy[i]
+                            if (!job) continue
+                            if (job._ri >= this.Query.range.value[0] && job._ri <= this.Query.range.value[1]) {
+                                dataReduced.push(job)
+                            }
+                        }
+                        dataArch_copy = dataReduced
+                        console.log('range set', dataArch_copy)
+                        break
+
+                    case 'from':
+
+                        var dataReduced = []
+                        for (var i = 0; i < dataArch_copy.length; i++) {
+                            var job = dataArch_copy[i]
+                            if (!job) continue
+                            if (this.Query.from.value <= job._ri) {
+                                dataReduced.push(job)
+                            }
+                        }
+
+                        dataArch_copy = dataReduced
+
+                        //
+                        break
+
+                    case 'filter':
+
+                        dataArch_copy = dataArch_copy.filter(z => {
+                            return indexOf(this.Query.filter.value, z._ri) !== -1
+                        })
+
+                        break
+                    default:
+                        if (this.lastUID) dataArch_copy = this.dataArch[this.lastUID]
+                        break
+                }
+
+                return dataArch_copy
+            }
+
+            // NOTE  we sort the order of the Query from the first to the last
+
+            const orderedObjValuesArr = this.QueryOrderedValuesArr(this.Query, 'oldest')
+            for (var i = 0; i < orderedObjValuesArr.length; i++) {
+                // NOTE obj is updated on each cycle
+                const topKey = Object.keys(orderedObjValuesArr[i])[0]
+                if (!topKey) continue
+                if (this.Query[topKey]) {
+                    forSwitch(topKey)
+                }
+            }
+            // reset query
+            this.Query = {}
+
+            return dataArch_copy
+        }
+
+        /**
          * @findID
          * @params jobData # find cooresponding uniq id from jobData
          */
@@ -76,6 +354,9 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
         }
 
+        timestamp() {
+            return new Date().getTime()
+        }
         /**
          * @eventDispatcher
          * callback dispatcher, will initiate lazy callback when calling next(..)

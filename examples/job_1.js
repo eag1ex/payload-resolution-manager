@@ -12,7 +12,14 @@ module.exports = (PRM, exampleData, notify) => {
         .set(d2)
         .set(d3) // add data to this item
         // .set(exampleData(5), 'index11')
+    // .of(uid)
+
+        .from(0)
+        .range(1, 4)
         // .only(1)
+        // .filter(z => {
+        //     return z.dataSet.age === 66
+        // })
         .compute(item => {
             // NOTE do some calculation for `each` item, must return 1 item
             // if (item._ri===0) // do something
