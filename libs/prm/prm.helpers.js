@@ -276,7 +276,6 @@ module.exports = (notify, PayloadResolutioManager) => {
                             }
                         }
                         dataArch_copy = dataReduced
-                        console.log('range set', dataArch_copy)
                         break
 
                     case 'from':
