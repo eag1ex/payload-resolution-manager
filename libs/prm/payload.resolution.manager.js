@@ -7,7 +7,7 @@
 
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
-    const { isEmpty, isString, uniq, cloneDeep, reduce, differenceBy, isObject, merge, indexOf, isArray, isNumber, head, flatMap, times, isBoolean } = require('lodash')
+    const { isEmpty, isString, uniq, cloneDeep, reduce, differenceBy, isObject, merge, indexOf, isArray, isNumber, head, isBoolean } = require('lodash')
 
     const PRMTOOLS = require('./prm.tools')(notify)
     class PayloadResolutioManager extends PRMTOOLS {
@@ -186,6 +186,7 @@ module.exports = (notify) => {
         updateSet(uid, _ri, newDataSet = null, type = 'new') {
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
+
             this.valUID(uid)
 
             if (this.strictJob(uid) === true) {
@@ -659,6 +660,12 @@ module.exports = (notify) => {
 
                 const resolutionOK = this.resolutionNearStatus(resolutionOutput, uid)
 
+                /**  TODO
+                 remember resolution outcome incase we called the method sooner then compute, due to irregular async situation, then invoke resolotion again after compute was called:
+                - add invoke callback to compute to check if resolution is already in que
+                - reinvoke resolution for same job again
+                **/
+
                 if (this.batch && resolutionOK) {
                     this.batchDataArch[uid] = [].concat(resolutionOutput.output, this.batchDataArch[uid])
                     this.batchDataArch[uid] = this.batchDataArch[uid].filter(z => z !== undefined)
@@ -711,8 +718,6 @@ module.exports = (notify) => {
          * `dataRef`: example : externalData[uid][dataRef]
          * `doDelete:boolean` provide if you want to delete this arch data and resIndex
          * `uid:String` : provide uid
-         * `uid:Array` : can provide array(..) of uids, `externalData` option not available for multi returns,
-         *
          * `pipe` pipe is used wiht prm.async.extention so not change it here
          * - return item
          */
@@ -720,23 +725,12 @@ module.exports = (notify) => {
             this.resData = null
             var resSelf = !!(this.resSelf && !this.asAsync) // can use self if not using pipe
             resSelf = resSelf && !pipe ? true : resSelf // can override if using async when pipe is disabled
-            if (!externalData && isArray(uid)) {
-                var items = {}
-                for (var i = 0; i < uid.length; i++) {
-                    var d = this._resolution_item(externalData, uid[i], dataRef, doDelete)
-                    items[uid] = d
-                }
-                if (resSelf) {
-                    this.d = d
-                    return this
-                } else return d
-            } else {
-                if (!uid) uid = this.lastUID
-                else this.lastUID = uid
-                this.valUID(uid)
-                if (!resSelf) this.d = null
-                return this._resolution_item(externalData, uid, dataRef, doDelete)
-            }
+            if (!uid) uid = this.lastUID
+            else this.lastUID = uid
+
+            this.valUID(uid)
+            if (!resSelf) this.d = null
+            return this._resolution_item(externalData, uid, dataRef, doDelete)
         }
 
         /**
@@ -811,8 +805,9 @@ module.exports = (notify) => {
 
             // NOTE
             // compare and double check index correctness, when `dataArch` is being updated
-            if (this.lastUID) {
+            if (this.lastUID && !this.asAsync) {
                 const ris = this.resIndex[this.lastUID]
+
                 const jobRI = v[this.lastUID].map(z => z._ri)
                 const noDiff = differenceBy(ris, jobRI, Math.floor).length === 0
                 if (!noDiff) {
@@ -1119,11 +1114,11 @@ module.exports = (notify) => {
     const PRMHelpers = require('./prm.helpers')(notify, PRMcompute)
     const PRMbatchReady = require('./prm.batchReady')(notify, PRMHelpers)
     const prmAsync = require('./prm.async.extention')(PRMbatchReady, notify)
-    class PRMext extends prmAsync {
+    class PRMextended extends prmAsync {
         constructor(debug, settings) {
             super(debug, settings)
         }
     }
 
-    return PRMext
+    return PRMextended
 }

@@ -1,3 +1,4 @@
+require('module-alias/register') // required for javascript alias file nale loading
 
 /**
  * @BankApp
@@ -7,8 +8,7 @@
  * - finaly return results
  */
 module.exports = () => {
-    const notify = require('../../libs/notifications')()
-    const PRM = require('../../libs/prm/payload.resolution.manager')(notify)
+    const { PRM, notify } = require('@root')
     const { cloneDeep, head, isArray } = require('lodash')
     const { banks } = require('./bankData')
     const { clients } = require('./clientData')
@@ -248,11 +248,11 @@ module.exports = () => {
                 }, 'john-doe')
 
             // NOTE perhaps john-doe is a special client of the BANK, we can do final batch together, since resolution for both has already been set!
-              
+
             this.prm.batchReady(['ICBC', 'john-doe'], 'grouped', (d) => {
                 notify.ulog({ message: 'batchReady for bank and client', d })
 
-                // NOTE no longer can pipe at this point 
+                // NOTE no longer can pipe at this point
                 // this.prm.pipe(z => {
                 //     // also this.prm.resData
                 //     console.log('hello pipe???')

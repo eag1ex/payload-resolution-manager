@@ -2,6 +2,10 @@
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
 
+    /**
+     * @EventDispatcher
+     * designed to handle callbacks
+     */
     class EventDispatcher {
         constructor(debug) {
             this.debug = debug

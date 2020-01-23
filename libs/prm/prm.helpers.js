@@ -17,7 +17,7 @@ module.exports = (notify, PayloadResolutioManager) => {
             this._dspch = {} // collect SimpleDispatch instances
             // NOTE collection of PrmProto state changes
             this.modelStateChange_cbs = {}
-
+            this.queries = {/** uid:Query */ } // hold each `this.Query` object assigned to job uid
             // if (typeof this.PrmProto.modelStateChange === 'function') {
             //     // NOTE
             //     // to reduce memory only use `modelStateChange` feature when these conditions are met
@@ -106,7 +106,6 @@ module.exports = (notify, PayloadResolutioManager) => {
                 notify.ulog({ message: `[Query] expressions not valid, nothing set!`, invalids }, true)
                 return
             }
-
             /**
              * @forSwitch
              * never set any objs here, only work with provided objs
@@ -224,6 +223,7 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
 
             this._Query = obj
+            this.queries[this.lastUID] = cloneDeep(this._Query)
         }
         get Query() {
             return this._Query
@@ -234,24 +234,25 @@ module.exports = (notify, PayloadResolutioManager) => {
          * decide which `dataArch` index to return when using PRMTOOLS
          */
         dataArchWhich() {
-            if (isEmpty(this.Query)) {
-                return this.dataArch[this.lastUID]
-            }
-
             var dataArch_copy = cloneDeep(this.dataArch)
+            const Query = this.queries[this.lastUID]
 
             const forSwitch = (each) => {
                 // could happen if we never called of to set `this.lastUID`
-                if (!this.Query.of && this.lastUID && !isEmpty(dataArch_copy)) {
+                if (!Query.of && this.lastUID && !isEmpty(dataArch_copy)) {
                     // if (this.debug) notify.ulog(`[dataArchWhich] ups _ofUID or _fromRI didnt provide correct results, nothing changed`, true)
                     if (dataArch_copy[this.lastUID]) {
                         dataArch_copy = dataArch_copy[this.lastUID]
                     }
                 }
 
+                if (!isArray(dataArch_copy) && !isEmpty(dataArch_copy)) {
+                    dataArch_copy = dataArch_copy[this.lastUID]
+                }
+
                 switch (each) {
                     case 'of':
-                        dataArch_copy = dataArch_copy[this.Query.of.value]
+                        if (dataArch_copy[Query.of.value]) dataArch_copy = dataArch_copy[Query.of.value]
                         break
                     case 'only':
 
@@ -259,7 +260,7 @@ module.exports = (notify, PayloadResolutioManager) => {
                         for (var i = 0; i < dataArch_copy.length; i++) {
                             var job = dataArch_copy[i]
                             if (!job) continue
-                            if (job._ri === this.Query.only.value) {
+                            if (job._ri === Query.only.value) {
                                 dataReduced.push(job)
                             }
                         }
@@ -271,7 +272,7 @@ module.exports = (notify, PayloadResolutioManager) => {
                         for (var i = 0; i < dataArch_copy.length; i++) {
                             var job = dataArch_copy[i]
                             if (!job) continue
-                            if (job._ri >= this.Query.range.value[0] && job._ri <= this.Query.range.value[1]) {
+                            if (job._ri >= Query.range.value[0] && job._ri <= Query.range.value[1]) {
                                 dataReduced.push(job)
                             }
                         }
@@ -284,7 +285,7 @@ module.exports = (notify, PayloadResolutioManager) => {
                         for (var i = 0; i < dataArch_copy.length; i++) {
                             var job = dataArch_copy[i]
                             if (!job) continue
-                            if (this.Query.from.value <= job._ri) {
+                            if (Query.from.value <= job._ri) {
                                 dataReduced.push(job)
                             }
                         }
@@ -295,14 +296,15 @@ module.exports = (notify, PayloadResolutioManager) => {
                         break
 
                     case 'filter':
-
-                        dataArch_copy = dataArch_copy.filter(z => {
-                            return indexOf(this.Query.filter.value, z._ri) !== -1
-                        })
+                        if (isArray(dataArch_copy)) {
+                            dataArch_copy = dataArch_copy.filter(z => {
+                                return indexOf(Query.filter.value, z._ri) !== -1
+                            })
+                        }
 
                         break
                     default:
-                        if (this.lastUID) dataArch_copy = this.dataArch[this.lastUID]
+                        if (this.dataArch[this.lastUID]) dataArch_copy = this.dataArch[this.lastUID]
                         break
                 }
 
@@ -310,19 +312,30 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
 
             // NOTE  we sort the order of the Query from the first to the last
-
-            const orderedObjValuesArr = this.QueryOrderedValuesArr(this.Query, 'oldest')
+            var looped = null
+            const orderedObjValuesArr = this.QueryOrderedValuesArr(this.queries[this.lastUID], 'oldest')
             for (var i = 0; i < orderedObjValuesArr.length; i++) {
                 // NOTE obj is updated on each cycle
+                const valid = orderedObjValuesArr[i]
+                if (isEmpty(valid)) continue
                 const topKey = Object.keys(orderedObjValuesArr[i])[0]
                 if (!topKey) continue
-                if (this.Query[topKey]) {
+                if (this.queries[this.lastUID][topKey]) {
                     forSwitch(topKey)
+                    looped = true
                 }
             }
             // reset query
-            this.Query = {}
-
+            if (this.queries[this.lastUID]) {
+                delete this.queries[this.lastUID]
+                this.Query = {}
+            }
+            // reshape to return only dataSets
+            if (!looped) {
+                if (dataArch_copy[this.lastUID]) dataArch_copy = dataArch_copy[this.lastUID]
+            } else {
+                if (dataArch_copy[this.lastUID]) dataArch_copy = dataArch_copy[this.lastUID]
+            }
             return dataArch_copy
         }
 
@@ -559,7 +572,7 @@ module.exports = (notify, PayloadResolutioManager) => {
 
         /**
          * @resolutionNearStatus
-         * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect job completed items
+         * when `onlyCompleteSet` or `onlyCompleteJob` are set it will only collect completed items
          * when `batch`  is set, and data available (except for default), each batch item will be stored in `batchDataArch`
          * @param resolutionOutput # required
          * @param uid # required

@@ -1,6 +1,6 @@
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')(notify)
-    const { reduce, isNumber, isFunction, cloneDeep, isEmpty, isArray, toArray, flatMap, isObject, head, indexOf, isString, isUndefined } = require('lodash')
+    const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
     const XPromise = require('../xpromise/x.promise')(notify)
     class PRMTOOLS {
         constructor(debug, opts) {
@@ -162,33 +162,19 @@ module.exports = (notify) => {
             var data = cloneDeep(this.dataArch)[uid]
             if (isEmpty(data)) return this
             if (!isArray(data)) return this
-
-            // set temporary data holder, extracted and reset via `dataArchWhich` method
             var filtered = data.filter((val, index) => {
-                // if (this._fromRI !== null) {
-                //     // if from was set filter only matching
-                //     if (!(val._ri >= this._fromRI)) {
-                //         return false
-                //     }
-                // }
-
-                // if (this._onlyRI !== null) {
-                //     // if only was set filter only matching
-                //     if (val._ri !== this._onlyRI) {
-                //         return false
-                //     }
-                // }
-
                 var v
                 try {
-                    v = cb(val, index)
+                    v = cb(val.dataSet, index)
                 } catch (err) {
                     notify.ulog(err, true)
                     v = false
                 }
                 return v || false
             })
+            // console.log('filtered is', filtered)
             filtered = filtered.map(z => z._ri)
+
             this.Query = Object.assign({}, this.Query, { filter: { value: filtered, timestamp: this.timestamp() } })
             return this
         }

@@ -4,9 +4,9 @@
  * With the help of Xpipe we can chain events that will run each method once each data is update and piped down.
  */
 
-const notify = require('../libs/notifications')()
-const PRM = require('../libs/prm/payload.resolution.manager')(notify)
+const { PRM, notify } = require('@root')
 const { cloneDeep } = require('lodash')
+
 const options = {
     asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
     strictMode: true, // make sure jobs of the same uid cannot be called again!
@@ -39,7 +39,7 @@ prm.set(assignONE.cusListA, assignONE.jobID)
     .set(asyncData(1000, assignONE.cusListB)) // add more customers to `jobID1`
     .filter((v, index) => {
         // bill gates account number
-        return (v.dataSet.accountNumber === '23497344567867')
+        return (v.accountNumber === '23497344567867')
     })
     // compute some logic based on previous selection
     .compute(async(d) => {
@@ -60,7 +60,7 @@ prm.set(assignONE.cusListA, assignONE.jobID)
     .set(assignTWO.cusListB)
     .filter((v, index) => {
         // Warren Buffet account number
-        return (v.dataSet.accountNumber === '345567898074')
+        return (v.accountNumber === '345567898074')
     })
     // .markDone(assignTWO.jobID) NOTE when set, can ignore future changes to this job
 // compute some logic based on previous selection

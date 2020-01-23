@@ -1,12 +1,11 @@
-
+require('module-alias/register') // required for javascript alias file nale loading
 /**
  * Application, advance chaining example
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
  * using `batchReady`
  */
-const notify = require('../libs/notifications')()
-const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
+const { PRM, notify } = require('@root')
 const options = {
     strictMode: true, // make sure jobs of same uid cannot be called again!
     onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
@@ -52,13 +51,14 @@ var d = prm.set(d1, job50)
     .of(job50) // of what job
     .from(0) // from what `_ri` index
     .filter((v, index) => { // will return filtered results for compute to manage, leaving the rest unchanged
-        return v.dataSet.age < 30
+        return v.age < 30
     })
     .compute(item => {
+        console.log('compute data', item)
         // make more changes to job_50, starting from `_ri` index
         return item
     }, 'each')
-    //.complete(job60)
+    // .complete(job60)
     // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
     .resolution(null, job60) // since last resolution was `job_60` this job will be returned first
 
@@ -68,7 +68,7 @@ var d = prm.set(d1, job50)
  * var d2 = prm.resolution(null,job60).d
  */
 
-//notify.ulog({ job60: d })
+// notify.ulog({ job60: d })
 
 /**
 * PRM Framework can handle delayed jobs very well

@@ -5,7 +5,7 @@
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isArray, times, isFunction, indexOf } = require('lodash')
-
+    const XpromiseExtended = require('./x.pipe')
     const XPromiseBase = require('./x.promise.base')(notify)
 
     class XPromise extends XPromiseBase {
@@ -553,6 +553,5 @@ module.exports = (notify) => {
         }
     }
 
-    const XpromiseExtended = require('./x.pipe')(XPromise, notify)
-    return XpromiseExtended
+    return XpromiseExtended(XPromise, notify)
 }

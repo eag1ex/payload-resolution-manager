@@ -1,11 +1,11 @@
 {
   "name": "payload-resolution-manager",
-  "version": "2.0",
+  "version": "2.0.0",
   "description": "",
   "main": "index2.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "example":"node ./examples/app.example.js"
+    "start":"node ./index.js",
+    "example": "node ./examples/app.example.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,7 +13,11 @@
     "bash-color": "0.0.4",
     "eslint": "^6.5.1",
     "lodash": "^4.17.15",
+    "module-alias": "^2.2.2",
     "standard": "^14.3.1",
     "util": "^0.12.1"
-  }
+  },
+  "_moduleAliases": {
+    "@root"      : "./libs/index.js"
+  }  
 }

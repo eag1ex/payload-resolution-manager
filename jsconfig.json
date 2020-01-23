@@ -1,0 +1,27 @@
+{
+    "compileOnSave": false,
+    "compilerOptions": {
+      "moduleResolution": "node",
+      "module": "commonJS",
+      "target": "es2017",
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "allowSyntheticDefaultImports": true,
+      "baseUrl": "./",
+      "paths": {
+        "@root": [
+          "libs/index.js"
+        ]
+      }
+    },
+    "lib": [
+      "es2017",
+      "dom"
+    ],
+    "include":["libs","examples"],
+    "exclude": [
+      "node_modules",
+      "tmp"
+    ]
+  }
+  

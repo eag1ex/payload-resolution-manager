@@ -1,11 +1,11 @@
+require('module-alias/register') // required for javascript alias file nale loading
 
 /**
  * Application, advance chaining, completion example
  * for example you have delayed job process, it is not async, but you only want jobs in que marked complete to return in final `batchReady` call.
  */
-const notify = require('../libs/notifications')()
-const PRM = require('../libs/prm/payload.resolution.manager')(notify)
 
+const { PRM, notify } = require('@root')
 const options = {
     strictMode: true, // make sure jobs of same uid cannot be called again!
     onlyCompleteSet: true, // (this)`resolution` will only return dataSets marked `complete`
@@ -41,7 +41,7 @@ prm.set(d1, job50)
 // .from(0) // from what `_ri` index
 
     .filter((v, index) => { // filtered results for compute to manage, leaving rest unchanged
-        return v.dataSet.age < 36
+        return v.age < 36
     })
 
 // .complete(/**uid*/) // mark job as `complete`
