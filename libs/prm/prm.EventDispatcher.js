@@ -108,13 +108,13 @@ module.exports = (notify) => {
         }
 
         /**
-         * @batchReady
+         * @onReady
          * wait for callbacks forwarded from Dispatch and returned in callback of this method
-         * - Dispatch must be set initially before you call `batchReady`
+         * - Dispatch must be set initially before you call `onReady`
          * @param {*} id # required
          * @param {*} cb #required
          */
-        batchReady(id, cb) {
+        onReady(id, cb) {
             const isFN = typeof cb === 'function'
             if (!isFN) {
                 notify.ulog(`[batchReady] cb must be set`, true)

@@ -146,6 +146,7 @@ this item will be saved by reference in class variable with `_ri` and `_uid`. Yo
     - `asAsync`: will use `pipe(cb=>,uid)` strategy, each data is treated as async.
     - `onlyCompleteJob`: this feture becomes usefull if you only want to return data marked as `complete`, job data will exist untill all job items are complete, and then they will be removed. 
     - `onlyCompleteSet` : similar to `onlyCompleteJob`, except only any items marked complete will be returned, else will be discarted
+    - `sandbox` : when set to `true` main methods run thru try/catch to avoid application from breaking.
     - `autoComplete`: marks each job dataSet [1,2] (each item in set) as complete when using `compute(...)` mwthod to porform data updates and changes
     - `batch`: enables functionulity to use `batchReady(..)`
     - `resSelf`: enable chaining resolution() again and again: `resolution().set(..).resolution(..)` to check when data is ready > only then the data gets removed from class instance.

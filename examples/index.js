@@ -10,13 +10,13 @@ const { notify } = require('@root')
 //const job_3 = require('./job_3')(notify)
 //const completionExample = require('./app.completion.example')
 //const asyncExample = require('./app.async.example')
- //const mixedExample = require('./app.example')
+const mixedExample = require('./app.example')
 
 
 
-const APP_PROJECT = (() => {
-    const AppProject = require('./app.project.example/app')()
-    new AppProject(false)
-})()
+// const APP_PROJECT = (() => {
+//     const AppProject = require('./app.project.example/app')()
+//     new AppProject(false)
+// })()
 
 

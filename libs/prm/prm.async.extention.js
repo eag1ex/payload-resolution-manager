@@ -113,16 +113,16 @@ module.exports = (PRM, notify) => {
             return this
         }
 
-        resolution(externalData, uid, dataRef, doDelete = true, pipe = true) {
-            if (!this.asAsync) return super.resolution(externalData, uid, dataRef, doDelete)
-            if (!pipe) return super.resolution(externalData, uid, dataRef, doDelete, pipe)
+        resolution(uid, externalData = null, dataRef, doDelete = true, pipe = true) {
+            if (!this.asAsync) return super.resolution(uid, externalData, dataRef, doDelete)
+            if (!pipe) return super.resolution(uid, externalData, dataRef, doDelete, pipe)
             if (!uid) uid = this.lastUID
             else this.lastUID = uid
             this.valUID(uid)
 
             this.pipe(async(d) => {
                 var extData = await (externalData || null)
-                const dd = super.resolution(extData, uid, dataRef, doDelete)
+                const dd = super.resolution(uid, extData, dataRef, doDelete)
                 this.resData = dd
                 return dd
             }, uid)

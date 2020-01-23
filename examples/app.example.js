@@ -7,6 +7,7 @@ require('module-alias/register') // required for javascript alias file nale load
 
 const { PRM, notify } = require('@root')
 const options = {
+    sandbox: true,
     strictMode: true, // make sure jobs of same uid cannot be called again!
     onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
     batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
@@ -59,13 +60,13 @@ var d = prm.set(d1, job50)
         return item
     }, 'each')
     // .complete(job60)
-    // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
-    .resolution(null, job60) // since last resolution was `job_60` this job will be returned first
+    // .resolution(job50) // NOTE  since job is not resolved we can see work on it
+    .resolution(job60) // since last resolution was `job_60` this job will be returned first
 
 /**
  * if you prefer to return each resolution seperatry:
- * var d1 = prm.resolution(null,job50).d
- * var d2 = prm.resolution(null,job60).d
+ * var d1 = prm.resolution(job50).d
+ * var d2 = prm.resolution(job60).d
  */
 
 // notify.ulog({ job60: d })
@@ -78,6 +79,7 @@ var d = prm.set(d1, job50)
 setTimeout(() => {
     var d = [{ name: 'danny', age: 15 }, { name: 'jane', age: 33 }, { name: 'rose', age: 25 }] // _ri =  7, 8 ,9
     prm.set(d, job50)
+        .resolution()
         .compute(item => {
             if (item._ri >= 7) {
                 item.dataSet.message = 'job delayed and updated'
@@ -109,7 +111,7 @@ prm.batchReady([job50, job70], 'grouped', d => {
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })
 })
 
-prm.batchReady([job60], 'grouped', d => {
+prm.batchReady([job60], 'flat', d => {
     notify.ulog({ batch: d, message: 'batchReady results for [job60]' })
     // NOTE PRM instance cache should be now be cleared/reset
     // notify.ulog({ dataArch: prm.dataArch, grab_ref: prm.grab_ref })

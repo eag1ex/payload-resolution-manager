@@ -1,11 +1,11 @@
 /**
- * @PrmCompute method extention
+ * @PRMcompute method extention
  * the compute method is quite large, se we decided to export it for clarity
  */
 module.exports = (notify, PRM) => {
     const { isEmpty, isFunction, isObject, isArray, head, flatMap, times } = require('lodash')
     if (!notify) notify = require('../notifications')()
-    class PrmCompute extends PRM {
+    class PRMcompute extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
         }
@@ -587,16 +587,6 @@ module.exports = (notify, PRM) => {
         }
 
         computeFinalize(uid, updateData) {
-            // if (!uid && !isEmpty(updateData)) {
-            //     // NOTE if passing anonymouse uid find if from updateData
-            //     var uids = []
-            //     updateData.forEach((job, inx) => {
-            //         uids.push(job._uid)
-            //     })
-            //     // should return uniq 1 job id
-            //     uid = uniq(uids).toString()
-            // }
-
             if (isArray(updateData)) updateData = flatMap(updateData) // in case you passed [[]] :)
 
             if ((updateData || []).length) {
@@ -630,6 +620,9 @@ module.exports = (notify, PRM) => {
                 }
 
                 this.dataArch = Object.assign({}, this.dataArch)
+
+                // if resolution called before compute made any update
+                this.onLateResolution(uid)
             }
             return this
         }
@@ -663,5 +656,5 @@ module.exports = (notify, PRM) => {
             return { originalFormat }
         }
     }
-    return PrmCompute
+    return PRMcompute
 }

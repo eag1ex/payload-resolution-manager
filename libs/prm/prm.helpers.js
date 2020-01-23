@@ -2,12 +2,12 @@
 /**
  * @PRMHelpers
  */
-module.exports = (notify, PayloadResolutioManager) => {
+module.exports = (notify, PRM) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isFunction, isArray, isString, uniq, flatMap, toArray, indexOf, isNumber, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     const SimpleDispatch = require('./prm.simpleDispatch')(notify)
-    class PRMHelpers extends PayloadResolutioManager {
+    class PRMHelpers extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
 
@@ -754,6 +754,25 @@ module.exports = (notify, PayloadResolutioManager) => {
             }
 
             return archJobSetCount === finalDataComplCount
+        }
+
+        /**
+         * @onLateResolution
+         * if resolution was called early before any final calculations were issued
+         * and we have set options to `onlyCompleteSet` or `onlyCompleteJob` true
+         * then issue another resolution call
+         * @param {*} uid
+         */
+        onLateResolution(uid) {
+            // if resolution was called before compute made any update
+            if (this.resCalledIndex[uid] &&
+                (this.onlyCompleteSet || this.onlyCompleteJob) &&
+                this.dataArch[uid]) {
+                this.resolution(uid)
+                delete this.resCalledIndex[uid]
+                notify.ulog(`[onLateResolution] called`)
+            }
+            return this
         }
 
         /**

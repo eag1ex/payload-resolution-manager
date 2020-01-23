@@ -1,12 +1,12 @@
 
 /**
- * @PrmBatchReady
+ * @PRMbatch
  * exported method of batchReady to own class and extended to main PRM class
  */
 module.exports = (notify, PRM) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, uniq, cloneDeep, reduce, indexOf, isArray, flatMap, times } = require('lodash')
-    class PrmBatchReady extends PRM {
+    class PRMbatch extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
 
@@ -122,7 +122,7 @@ module.exports = (notify, PRM) => {
                     var totals = []
                     times(jobUIDS.length, (inx) => {
                         const id = jobUIDS[inx]
-                        this.eventDispatcher.batchReady(id, (d, uid) => {
+                        this.eventDispatcher.onReady(id, (d, uid) => {
                             // make sure ids match
                             if (indexOf(jobUIDS, uid) !== -1) {
                                 totals.push(id)
@@ -136,89 +136,11 @@ module.exports = (notify, PRM) => {
                     })
                 }
 
-                /**
-                 * NOTE only one or the other should fire once
-                 * `modelStateChange_cbs` is set from `prm.helpers` and extended from `this.PrmProto.modelStateChange` this option if only available if `onlyCompleteJob` if enabled!
-                 */
-
-                // NOTE @simpleDispatch
-                //  `simpleDispatch` class to easly cascade thru events, then resolve when satisfied!
-
-                var statusSet = []
-
-                // FIXME  perhaps we should not
-                // const smd = new this.simpleDispatch(uidRef, e => {
-                //     statusSet.push(e.event)
-                //     if (this.onlyCompleteJob) {
-                //         const satisfied = uniq(statusSet).filter(z => {
-                //             return z === 'resolutionINDEX' || z === 'modelStateChange'
-                //         }).length
-
-                //         //
-                //         if (satisfied === 2) {
-                //             if (this.debug) notify.ulog({ message: 'batchReady complete on lazy complete' })
-                //             exitWithCB()
-                //             return
-                //         }
-                //     }
-                //     if (e.event === 'batchCBDone') {
-                //         // if (this.debug) notify.ulog({ message: 'batchReady done' })
-                //         exitWithCB()
-                //     }
-                // })
-                /**
-                 *   callback available when onlyCompleteJob is set
-                 *   // lazy callback
-                 * -----------------------------------
-                 */
-
-                // if (!alreadyDone[uidRef] && this.onlyCompleteJob === true) {
-                //     var modelUIDS = []
-
-                //     times(jobUIDS.length, inx => {
-                //         const jobUID = jobUIDS[inx]
-
-                //         if (!this.modelStateChange_cbs[jobUID]) {
-                //             this.modelStateChange_cbs[jobUID] = (status) => {
-                //                 const modelUID = status.uid
-                //                 if (status.complete) {
-                //                     modelUIDS.push(modelUID)
-                //                     modelUIDS = uniq(modelUIDS)
-                //                     // must match so we know the result is valid
-                //                     if (modelUIDS.length === jobUIDS.length && !alreadyDone[uidRef]) {
-                //                         smd.next({ event: 'modelStateChange', status: 'complete' })
-                //                     }
-                //                 }
-                //             } // modelStateChange_cbs
-                //         }
-
-                //         if (!this.resolutionINDEX_cb[jobUID]) {
-                //             this.resolutionINDEX_cb[jobUID] = (status) => {
-                //                 smd.next({ event: 'resolutionINDEX', status: 'complete' })
-                //             }// resolutionINDEX_cb
-                //         }
-                //     })
-                // }
-
-                /**
-                 *
-                 * called as backup and when not using `onlyCompleteJob` option
-                 * -----------------------------------
-                 */
-                // if (!alreadyDone[uidRef]) {
-                //     this.batchCBDone(jobUIDS, (pass) => {
-                //         if (!pass) return
-                //         if (!alreadyDone[uidRef]) {
-                //             smd.next({ event: 'batchCBDone', status: 'complete' })
-                //         }
-                //     })
-                // }
-
                 return null
             } else {
                 notify.ulog(`[batchReady] needs a callback to return final data!`, true)
             }
         }
     }
-    return PrmBatchReady
+    return PRMbatch
 }

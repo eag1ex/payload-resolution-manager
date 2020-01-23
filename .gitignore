@@ -12,7 +12,7 @@ md_test.js
 Dockerfile
 docker-compose.yml
 generic-heroku-server/node_modules
-
+cli.js
 # mongo db
 ###################
 #Don't commit Mongo Database files

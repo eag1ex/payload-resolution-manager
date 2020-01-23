@@ -66,8 +66,8 @@ module.exports = (notify) => {
             item.complete = true
             return item
         }, 'each')
-        .resolution(null, 'job_1').d
-    const n2 = prm.resolution(null, 'job_2').d
+        .resolution('job_1').d
+    const n2 = prm.resolution('job_2').d
 
     notify.ulog({ job_2: n2 })
 }
