@@ -5,9 +5,10 @@
 module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
 
-    class SimpleDispatch {
+    return class SimpleDispatch {
         constructor() {
         }
+
         get dispatch() {
             return function(uid, cb) {
                 this.uid = uid
@@ -36,5 +37,4 @@ module.exports = (notify) => {
             }
         }
     }
-    return SimpleDispatch
 }

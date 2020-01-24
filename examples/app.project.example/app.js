@@ -39,6 +39,7 @@ module.exports = () => {
 
         get prmSettings() {
             return {
+                sandbox: true, // will handle errors without crashing the app
                 asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
                 strictMode: true, // make sure jobs of the same uid cannot be called again!
                 onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
@@ -225,7 +226,7 @@ module.exports = () => {
                     head(d).dataSet.clients = [].concat(clients, dataSet)
                     head(d).dataSet.value = head(d).dataSet.value + fee
                     this.prm.updateSet(clientID, 0, dataSet)
-                    console.log('findID>', this.prm.findID(d))
+
                     return d
                 }, 'all')
                 .complete()

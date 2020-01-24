@@ -211,7 +211,8 @@ All data for each job is deleted at this poin, including pipe(()=>) sequence.
 ```
 
 
-
+##### TODOS
+- add:methods: connect, listen, accept, send > for currently open jobs can send information to each other
 
 ##### Notes
 - Can be implemented on browser/client and compiled down to ES5, in next version solution will be available.

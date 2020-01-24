@@ -7,7 +7,7 @@ module.exports = (notify) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isNumber, isObject, isArray, omit, isString, cloneDeep, isEqual } = require('lodash')
 
-    class PrmProto {
+    return class PrmProto {
         constructor(debug) {
             this.debug = debug
             this._modelBase = {}
@@ -265,6 +265,4 @@ module.exports = (notify) => {
             // return Object.create(PrmProto.prototype, createMod(strip))
         }
     }
-
-    return PrmProto
 }

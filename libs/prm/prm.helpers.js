@@ -7,7 +7,8 @@ module.exports = (notify, PRM) => {
     const { isEmpty, isFunction, isArray, isString, uniq, flatMap, toArray, indexOf, isNumber, cloneDeep, reduce, head, isUndefined, omit, isObject, omitBy } = require('lodash')
     const PrmProto = require('./prm.proto')(notify)
     const SimpleDispatch = require('./prm.simpleDispatch')(notify)
-    class PRMHelpers extends PRM {
+
+    return class PRMHelpers extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
 
@@ -803,6 +804,4 @@ module.exports = (notify, PRM) => {
             return true
         }
     }
-
-    return PRMHelpers
 }

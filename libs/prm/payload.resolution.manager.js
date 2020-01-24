@@ -920,12 +920,17 @@ module.exports = (notify) => {
             return this
         }
     }
+
+    /**************************************************************
+     * Extending Payload Resolution Manager (PRM) class
+     */
     const PRMresolution = require('./prm.resolution')(notify, PayloadResolutioManager)
     const PRMcompute = require('./prm.compute')(notify, PRMresolution)
     const PRMHelpers = require('./prm.helpers')(notify, PRMcompute)
     const PRMbatchReady = require('./prm.batchReady')(notify, PRMHelpers)
     const PRMasync = require('./prm.async.extention')(PRMbatchReady, notify)
     const PRMsandbox = require('./prm.sandbox')(PRMasync, notify)
+
     class PRMextended extends PRMsandbox {
         constructor(debug, settings) {
             super(debug, settings)

@@ -6,7 +6,8 @@
 module.exports = (notify, PRM) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, uniq, cloneDeep, reduce, indexOf, isArray, flatMap, times } = require('lodash')
-    class PRMbatch extends PRM {
+
+    return class PRMbatch extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
 
@@ -142,5 +143,4 @@ module.exports = (notify, PRM) => {
             }
         }
     }
-    return PRMbatch
 }

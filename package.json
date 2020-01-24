@@ -18,7 +18,9 @@
     "util": "^0.12.1"
   },
   "_moduleAliases": {
-    "@root": "./libs/index.js"
+    "@root": "./libs/index.js",
+    "@prm": "./libs/prm",
+    "@xpromise": "./libs/xpromise"
   },
   "devDependencies": {
     "minimist": "^1.2.0"

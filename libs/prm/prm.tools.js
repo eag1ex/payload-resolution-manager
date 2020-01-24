@@ -2,7 +2,8 @@ module.exports = (notify) => {
     if (!notify) notify = require('../notifications')(notify)
     const { isNumber, isFunction, cloneDeep, isEmpty, isArray } = require('lodash')
     const XPromise = require('../xpromise/x.promise')(notify)
-    class PRMTOOLS {
+
+    return class PRMtools {
         constructor(debug, opts) {
             this.debug = debug
             // PRMTOOLS
@@ -254,6 +255,4 @@ module.exports = (notify) => {
             return this
         }
     }
-
-    return PRMTOOLS
 }

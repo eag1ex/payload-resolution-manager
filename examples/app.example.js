@@ -86,7 +86,9 @@ setTimeout(() => {
             }
             return item
         }, 'each')
-        .resolution()
+        .resCallback(d => {
+            console.log('resCallback', d)
+        }, job50)
 }, 2000)
 
 var delayedJob = (() => {

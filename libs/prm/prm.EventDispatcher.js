@@ -6,7 +6,7 @@ module.exports = (notify) => {
      * @EventDispatcher
      * designed to handle callbacks
      */
-    class EventDispatcher {
+    return class EventDispatcher {
         constructor(debug) {
             this.debug = debug
             this.cbQueue = {}
@@ -129,5 +129,4 @@ module.exports = (notify) => {
             return this
         }
     }
-    return EventDispatcher
 }

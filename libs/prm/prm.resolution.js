@@ -1,7 +1,8 @@
 module.exports = (notify, PRM) => {
     if (!notify) notify = require('../notifications')()
     const { isEmpty, isObject, isArray, cloneDeep, isFunction } = require('lodash')
-    class PRMresolution extends PRM {
+
+    return class PRMresolution extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
 
@@ -183,7 +184,7 @@ module.exports = (notify, PRM) => {
                 /// ///////////
                 this.resData = resolutionOutput.output
                 // this should only work if we call same resolution more then once, that is the whole point of this callback!
-                if (typeof this.resCallback[uid] === 'function') {
+                if (typeof this._resCallback[uid] === 'function') {
                     this._resCallback[uid](this.resData)
                 }
                 return returnAS(resolutionOutput.output)
@@ -199,6 +200,7 @@ module.exports = (notify, PRM) => {
          * @resCallback
          * @param {*} cb  required
          * @param {*} uid optional, will use last set uid
+         * TODO not yet functional need to implement EventDispatcher
          */
         resCallback(cb, uid) {
             if (!uid) uid = this.lastUID
@@ -218,5 +220,4 @@ module.exports = (notify, PRM) => {
             return this
         }
     }
-    return PRMresolution
 }

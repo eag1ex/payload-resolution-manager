@@ -13,7 +13,8 @@
 module.exports = (PRM, notify) => {
     if (!notify) notify = require('../notifications')()
     const { cloneDeep, uniq } = require('lodash')
-    class PRMasync extends PRM {
+
+    return class PRMasync extends PRM {
         constructor(debug, opts) {
             super(debug, opts)
             this._pipeDelay = 100 // due to computation and callbacks, need an unpresented delay
@@ -229,6 +230,4 @@ module.exports = (PRM, notify) => {
             return this
         }
     }
-
-    return PRMasync
 }
