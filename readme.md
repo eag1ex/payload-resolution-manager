@@ -27,6 +27,7 @@
 - Examples in `./examples/index.js and ./examples/..` folder
 
 ##### Usage
+- `npm i`
 - `npm run example` or `node ./examples/index`
 
 
