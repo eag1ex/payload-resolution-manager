@@ -8,9 +8,9 @@
     - Sorting DATA at different states
     - Referencing and assesing jobs status
     - Validating results
-    - filtering job data by value or index, with the help of prm tools/ and prm Query
-    - returning async/ defered data
-    - munipulating independant jobs
+    - Filtering job data by value or index, with the help of prm tools/ and prm Query
+    - Returning async/ defered data
+    - Munipulating independant jobs
 
 * Perhaps you manage many data sources and want to make sure they are in-sync
 * Individual jobs can be worked on independently, and will be tracked by resolution index (`_ri`), and job (`_uid`)
@@ -18,6 +18,7 @@
     - `For example` You issued 20 job requests with each 5 data sets [x5]. Since all requests are issued at different times, they will be out-of-order, `PRM` will track them with resolution index, and collect data by `_uid` in the end.
 
 * You can Provide async/defered data, and chain the calls, it will wait... Then continue after data becomes available, this is possible with the help of `XPromise/XPipe` (from another tool) available at : `https://bitbucket.org/eag1ex/xpromise` - take a look for more details.
+
 
 ##### Stack
  - Lodash, ES6, JavaScript, Node.js
