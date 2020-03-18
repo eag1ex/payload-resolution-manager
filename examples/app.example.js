@@ -55,7 +55,6 @@ var d = prm.set(d1, job50)
         return v.age < 30
     })
     .compute(item => {
-        console.log('compute data', item)
         // make more changes to job_50, starting from `_ri` index
         return item
     }, 'each')

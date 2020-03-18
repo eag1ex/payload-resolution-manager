@@ -14,7 +14,7 @@ const { notify } = require('@root')
 
 
 
-const APP_PROJECT = (() => {
+const BANK_PROJECT = (() => {
     const AppProject = require('./app.project.example/app')()
     new AppProject(false)
 })()

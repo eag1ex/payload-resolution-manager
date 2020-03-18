@@ -5,7 +5,7 @@
   "main": "index2.js",
   "scripts": {
     "start": "node ./index.js",
-    "example": "node ./examples/app.example.js"
+    "example": "node ./examples/index"
   },
   "author": "",
   "license": "ISC",

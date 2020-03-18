@@ -20,18 +20,24 @@
 * You can Provide async/defered data, and chain the calls, it will wait... Then continue after data becomes available, this is possible with the help of `XPromise/XPipe` (from another tool) available at : `https://bitbucket.org/eag1ex/xpromise` - take a look for more details.
 
 ##### Stack
- - Lodash, ES6, javascript, node.js
+ - Lodash, ES6, JavaScript, Node.js
+
+##### Examples
+- Bank project example: connecting to each client... Extracting assets, then updating Bank's asset. 
+- Examples in `./examples/index.js and ./examples/..` folder
 
 ##### Usage
-- Examples in `./examples/index.js and ./examples/..` folder
+- `npm run example` or `node ./examples/index`
+
+
+##### PRM PRO:
+* Payload Resolution Manager PRO is also available - allows asynchronous secure conenction, and sharing of information between transitioning JOBS. For business enquiries please contact Eaglex.
 
 
 ##### Features:
-* This application supports chaining of methods, example:
-
+* Application supports chaining of methods, example:
 ```
 /**
- * Application, advance chaining example
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
  * using `batchReady`
  */
