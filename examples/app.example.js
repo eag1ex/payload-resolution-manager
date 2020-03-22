@@ -1,4 +1,4 @@
-require('module-alias/register') // required for javascript alias file nale loading
+require('module-alias/register') // required for javascript alias file name loading
 /**
  * Application, advance chaining example
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
