@@ -3,7 +3,7 @@ require('module-alias/register') // required for javascript alias file nale load
 /**
  * @BankApp
  * more practical integration of PRM framework with BankApp example
- * - simmulation funds transaction and proxy
+ * - simmulating funds transaction and proxy
  * - make a bank enquiry, then make enquiry to each client, update changes to the bank and the client
  * - finaly return results
  */
@@ -40,10 +40,10 @@ module.exports = () => {
         get prmSettings() {
             return {
                 sandbox: true, // will handle errors without crashing the app
-                asAsync: true, // to allow async return, data is passed asyncronously and need to use `pipe` to get each new update
-                strictMode: true, // make sure jobs of the same uid cannot be called again!
+                asAsync: true, // allow async return, data is passed asynchronously, need to use `pipe().pipe()` to get each new update
+                strictMode: true, // make sure jobs of same uid cannot be called again!
                 onlyCompleteJob: true, // `resolution` will only return dataSets marked `complete`
-                batch: true, // after running `resolution` method, each job that is batched using `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
+                batch: true, // enabled each job batched using `batchReady([jobA,jobB,jobC])`,  to be returned after calling `resolution`
                 resSelf: true, // allow chaning multiple resolution
                 autoComplete: true // auto set complete on every compute iteration within `each` call
             }
@@ -163,14 +163,14 @@ module.exports = () => {
                 }, 'all')
                 // .resolution()
 
-            // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` option with `pipe's
+            // NOTE if we do not set pipe id, it will lookup `lastUID`, due to async nature, order is not guaranteed, this is only the case when using `asAsync` that enables piping extention
             // this.prm.pipe(z => {
             //     // also this.prm.resData
             //     notify.ulog({ message: '-- transaction made', bank: 'ICBC', d: z })
             // }, 'ICBC')
 
             // NOTE we have to wait for bank to complete first! Since client jobs were called internaly
-            // and will become available after
+            // and will become available later
             await this.prm.async('ICBC')
 
             // NOTE check to see what job go set

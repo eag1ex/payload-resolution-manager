@@ -92,7 +92,7 @@ var d = prm.set(d1, job50)
         // make more changes to job_50, starting from `_ri` index 5
         return item
     }, 'each')
-// .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
+// .resolution(null, job50) // NOTE  since job is not resolved we can still work on it
     .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
     /**
      * if you prefer to return each resolution seperatry:
