@@ -597,6 +597,10 @@ module.exports = (notify, PRM) => {
                         if (this.debug) notify.ulog(`[compute] warning item to update is empty, skipping`)
                         continue
                     }
+                    // NOTE when we filter not all items are passed, so have to set update to non filtered data as well
+                    if (this.autoComplete) {
+                        updItem.complete = true
+                    }
 
                     var _uid = !uid ? updItem._uid : uid
                     if (!this.dataArch[_uid]) continue

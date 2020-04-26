@@ -26,6 +26,7 @@
 ##### Examples
 - Bank project example: connecting to each client... Extracting assets, then updating Bank's asset. 
 - Examples in `./examples/index.js and ./examples/..` folder
+- Nice demo examples in `./examples/screens/..`  example: `node ./examples/screens/screen-1.js`
 
 ##### Usage
 - `npm i`
