@@ -1,6 +1,6 @@
 #### [ Developed by Eaglex ](http://eaglex.net)
 ##### Name: Payload Resolution Manager (PRM)
-* License: `CC BY` 
+* License: `CC BY-NC-SA` 
 
 #### Description
 * Easy to use full featured *Data Management Service* for async handling with Node.js
@@ -234,5 +234,5 @@ All data for each job is deleted at this poin, including pipe(()=>) sequence.
  * Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=PayloadResolutionManager`
 
 ##### LICENSE
-* LICENCE: CC BY
-* SOURCE: https://creativecommons.org/licenses/by/4.0/legalcode
+* LICENCE: CC BY-NC-SA
+* SOURCE: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode

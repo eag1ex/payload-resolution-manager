@@ -8,7 +8,7 @@
     "example": "node ./examples/index"
   },
   "author": "",
-  "license": "ISC",
+  "license": "CC BY-NC-SA",
   "dependencies": {
     "bash-color": "0.0.4",
     "eslint": "^6.5.1",
