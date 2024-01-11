@@ -40,7 +40,9 @@
 
 ##### Features:
 * Application supports chaining of methods, example:
-```
+  
+  
+```js
 /**
  * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is delayed. all jobs are returned
  * using `batchReady`
