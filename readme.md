@@ -242,5 +242,5 @@ All data for each job is deleted at this point, including pipe(()=>) sequence.
  * Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=PayloadResolutionManager`
 
 ##### LICENSE
-* LICENCE: CC BY-NC-SA
+* LICENSE: CC BY-NC-SA
 * SOURCE: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
