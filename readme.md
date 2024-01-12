@@ -2,6 +2,11 @@
 ##### Name: Payload Resolution Manager (PRM)
 * License: `CC BY-NC-SA` 
 
+
+#### Playground on Codesandbox
+#### [ codesandbox ](https://codesandbox.io/p/github/eag1ex/payload-resolution-manager/master)
+
+
 #### Description
 * Easy to use full featured *Data Management Service* for async handling with Node.js
 * Good for: 
