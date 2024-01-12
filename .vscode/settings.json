@@ -95,5 +95,8 @@
         "markdown",
         "latex",
         "plaintext"
-    ]
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    }
 }

@@ -206,7 +206,7 @@ All data for each job is deleted at this poin, including pipe(()=>) sequence.
 * `range(fromRI:index,toRI:index)`: select range to compute from dataSet of current job, via RI index position.. ` dataSet[0]._ri===fromRI ... toRI etc`
 
 ##### Example output:
-```
+```js
      [{ dataSet: { name: 'daniel', age: 35 }, _ri: 0, _uid: 'index6' },
      { dataSet: { name: 'lary', age: 65 }, _ri: 1, _uid: 'index6' },
      { dataSet: { name: 'andy', age: 54 }, _ri: 2, _uid: 'index6' },

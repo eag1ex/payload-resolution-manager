@@ -2,14 +2,13 @@
   "name": "payload-resolution-manager",
   "version": "2.0.0",
   "description": "",
-  "main": "index2.js",
   "scripts": {
-    "start": "node ./index.js",
-    "example": "node ./examples/index"
+    "dev": "node ./examples/index"
   },
   "author": "",
   "license": "CC BY-NC-SA",
   "dependencies": {
+    "@types/node": "^20.11.0",
     "bash-color": "0.0.4",
     "eslint": "^6.5.1",
     "lodash": "^4.17.15",
@@ -24,5 +23,9 @@
   },
   "devDependencies": {
     "minimist": "^1.2.0"
+  },
+  "engineStrict": true,
+  "engines": {
+    "node": "16"
   }
 }
