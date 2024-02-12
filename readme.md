@@ -2,7 +2,12 @@
 
 ##### Name: Payload Resolution Manager (PRM)
 
-- License: `CC BY-NC-SA`
+#### <span style="color:red">Latest updates</span>
+
+<i>Project demo is now available on github pages: </i>
+[ >> payload-resolution-manager <<](https://eag1ex.github.io/payload-resolution-manager/)
+
+<br>
 
 #### Playground on Codesandbox
 
