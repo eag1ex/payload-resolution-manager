@@ -1,0 +1,342 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Easy to use Micro Service for your data handling with javascript and Node.js">
+    <meta name="author" content="EagleX, eaglex.net">
+    <meta name="robots" content="index, follow">
+    <title>Payload Resolution Manager</title>
+
+    <link href="./css/bootstrap-reboot.min.css" rel="stylesheet" />
+    <link href="./css/bootstrap.min.css" rel="stylesheet" />
+    <link href="./css/bootstrap-grid.min.css" rel="stylesheet" />
+    <link href="./css/custom.css" rel="stylesheet">
+    <link href="./css/code-prettiefy-desert.css" rel="stylesheet">
+    <script src="./js/run_prettify.js"></script>
+</head>
+
+<body class="container bg-dark text-white my-5">
+    <h3 id="-name-live-event">Payload Resolution Manager</h3>
+    <ul>
+        <li>By <a href="http://eaglex.net">EagleX</a></li>
+        <li>License: <code>CC BY</code></li>
+    </ul>
+    <hr class="bg-white" />
+    <h5 id="about" class="mt-5">Bitbucket Repo:</h5>
+    <div class="mb-3">
+        <code> <a href="https://bitbucket.org/eag1ex/payload-resolution-manager">https://bitbucket.org/eag1ex/payload-resolution-manager</a> </code>
+    </div>
+    <h4 id="description">Description</h4>
+    <ul>
+        <li>Easy to use Micro Service for async data handling with Node.js</li>
+        <li>Perhaps you manage many data sources and want to make sure they are in-sync and correct order </li>
+        <li>Individual jobs can be worked on independently (out-of-order), and will be tracked by resolution index
+            (<code>_ri</code>), and job id (<code>_uid</code>)</li>
+        <li></li>
+        <li>
+            <p>You can setup timely job batches for any number of jobs to be called when done.</p>
+            <ul>
+                <li><code>For example</code> You issued 20 job requests, each 5 data sets [x5]. Since all requests are
+                    issued at different
+                    times, each will be out-of-order, <code>PRM</code> will track then with resolution index, and
+                    collect data by <code>_uid</code> in the end.</li>
+    </ul>
+    </li>
+    </ul>
+    <h5 id="stack">Stack</h5>
+    <ul>
+    <li>Lodash, ES6, javascript, node.js</li>
+    </ul>
+    <h5 id="usage">Usage</h5>
+    <ul>
+    <li>Examples in <code>./examples/index.js and ./examples/app.example.js</code></li>
+            </ul>
+            <h5 id="features-">Features:</h5>
+            <ul>
+                <li>This application supports chaining of methods, example:</li>
+            </ul>
+     <pre class="prettyprint">
+            /**
+            * Application, advance chaining example
+            * We declared 3 jobs and did some compute to update original data states, the 3rd jobs is 
+            delayed. all jobs are returned
+            * using `batchReady`
+            */
+           const notify = require('../libs/notifications')()
+           const PRM = require('../libs/prm/payload.resolution.manager')(notify)
+           
+           const options = {
+               onlyComplete: true, // `resolution` will only return dataSets marked `complete`
+               batch: true, // after running `resolution` method, each job that is batched using 
+               `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
+               resSelf: true, // allow chaning multiple resolution
+               autoComplete: true // auto set complete on every compute iteration within `each` call
+           }
+           const debug = true
+           const prm = new PRM(debug, options)
+           var job50 = 'job_50'
+           var job60 = 'job_60'
+           var job70 = 'job_70'
+           var d1 = [{ name: 'alex', age: 20 }, { name: 'jackie', age: 32 }] // _ri = 0,1
+           var d2 = [{ name: 'daniel', age: 55 }, { name: 'john', age: 44 }] // _ri = 2,3
+           var d3 = [{ name: 'max', age: 44 }, { name: 'smith', age: 66 }, { name: 'jane', age: 35 }] // _ri = 4,5,6
+           var d4 = [{ name: 'mayson', age: 27 }, { name: 'bradly', age: 72 }, { name: 'andrew', age: 63 }] // _ri = 0,1,2
+           
+           var d = prm.set(d1, job50)
+               .set(d2)
+               .set(d3)
+               .from(3) // will only make compute's starting from(index)  < `_ri`
+               .compute(item => {
+                    item.dataSet.age = 70
+                    item.dataSet.occupation = 'retired'
+
+                   // if (item._ri === 3) {
+                   //  item._uid = '10000_error' // protected cannot be changed
+                   //  item._ri = '-50'  // protected cannot be changed
+                   // } else item.dataSet.occupation = 'stock broker'
+
+                   /*
+                    item.complete = true   
+                    // set only if `onlyComplete=true` and `autoComplete=false` 
+                    // otherwise `resolution` will omit this job, or part of it.
+                   */
+
+                   return item
+               }, 'each')
+           // .markDone() // no future changes are allowed to `job_50`
+               .set(d1, job60)
+               .compute(items => {
+                   var allNewItems = items.map((zz, inx) => {
+                       return { name: zz.dataSet.name, surname: 'anonymous', age: zz.dataSet.age + inx + 1 }
+                   })
+                   // return value need to match total length of initial job
+                   return allNewItems
+               }, 'all')
+           
+               .of(job50) // of what job
+               .from(5) // from what `_ri` index
+               .compute(item => {
+                   // make more changes to job_50, starting from `_ri` index 5
+                   return item
+               }, 'each')
+           // .resolution(null, job50) // NOTE  since job is not resolved we can see work on it
+               .resolution(null, job60).d // since last resolution was `job_60` this job will be returned first
+               /**
+                * if you prefer to return each resolution seperatry:
+                * var d1 = prm.resolution(null,job50).d
+                * var d2 = prm.resolution(null,job60).d
+                */
+           
+           notify.ulog({ job60: d })
+           
+           /**
+            * PRM Framework can handle delayed jobs very well
+            * below is an async job uid:`job_50` which hasnt resolved, so we can make more changes
+            */
+           /// update job50 again
+           setTimeout(() => {
+                // _ri =  7, 8 ,9
+               var d = [{ name: 'danny', age: 15 }, { name: 'jane', age: 33 }, { name: 'rose', age: 25 }] 
+               prm.set(d, job50)
+                   .compute(item => {
+                       if (item._ri >= 7) {
+                           item.dataSet.message = 'job delayed and updated'
+                       }
+                       return item
+                   }, 'each')
+                   .resolution()
+           }, 2000)
+           
+           var delayedJob = (() => {
+               return new Promise((resolve, reject) => {
+                   setTimeout(() => {
+                       prm.set(d4, job70)
+                           .compute(items => {
+                               return items.map((zz, inx) => {
+                                   var orVals = zz.dataSet
+                                   return Object.assign({}, orVals, { status: 'updated', age: orVals.age + 10 + inx })
+                               })
+                           }, 'all')
+                           .resolution()
+                       resolve(true)
+                   }, 500)
+               })
+           })()
+           
+           prm.batchReady([job50, job60, job70], 'flat', d => {
+               notify.ulog({ batch: d, message: 'delayed results' })
+           })
+           
+           /**
+                * returns..
+                [ { name: 'alex', age: 20 },
+                { name: 'jackie', age: 32 },
+                { name: 'daniel', age: 55 },
+                { name: 'john', age: 70, occupation: 'retired' },
+                { name: 'max', age: 70, occupation: 'retired' },
+                { name: 'smith', age: 70, occupation: 'retired' },
+                { name: 'jane', age: 70, occupation: 'retired' },
+                { name: 'danny', age: 15, message: 'job delayed and updated' },
+                { name: 'jane', age: 33, message: 'job delayed and updated' },
+                { name: 'rose', age: 25, message: 'job delayed and updated' },
+                { name: 'mayson', age: 37, status: 'updated' },
+                { name: 'bradly', age: 83, status: 'updated' },
+                { name: 'andrew', age: 75, status: 'updated' },
+                { name: 'alex', surname: 'anonymous', age: 21 },
+                { name: 'jackie', surname: 'anonymous', age: 34 } ],,
+                */
+           // })          
+     </pre>
+
+            <h5 id="methodes-explained-">Methodes explained:</h5>
+            <ul>
+                <li><code>Data Prototypes</code>: each Job:uid consists of 
+                    item/s:[{dataSet,_uid,_ri,complete, _timestamp},...]. Each array slot is a prototype of <code>PrmProto</code> instance, props: <code>_uid, _ri</code> are protected
+                    and cannot be overriten to make sure of consistency and prone errors. Only <code>dataSet, _timestamp, complete</code>
+                    props can be changed. </li>
+                <li><code>uid:String</code>: Provide uid for every data asset, per job. If not specified, will try to
+                    find last used uid.
+                </li>
+                <li><code>data[...]</code>: Every job must be an array of any value, example:
+                    [&#39;string&#39;,[],{},null,false,1, new Function()] </li>
+                <li>
+                    <p><code>set(data:Array,uid:String)</code>: Provide data as array, with <code>uid</code> &gt; uniq
+                        identifier,<br>this
+                        item will be saved by reference in class variable with <code>_ri</code> and <code>_uid</code>.
+                        You can provide concurent
+                        <code>set</code> for the same <code>uid</code> via chaining or by line.</p>
+                </li>
+                <li>
+                    <p><code>markDone(uid:String)</code>: Provide after any <code>set</code>, and will make sure no
+                        other changes are allowed to this job - any subsequent calls will be ignored.</p>
+                </li>
+                <li>
+                    <p><code>updateDataSet(uid,_ri, newDataSet,type)</code> : update job, targted via <code>_ri</code>
+                        together with <code>uid</code> </p>
+                    <ul>
+                        <li><code>newDataSet</code> can be any data, example: {},[],1,true, except for null</li>
+                        <li><code>type:string</code>: can specify <code>merge</code> or <code>new</code>. Best to do
+                            your own merging if its a large nested object, or array.</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><code>updateSet(newData,uid)</code> : provide raw data produced by <code>set</code> or use
+                        <code>getSet(uid)</code>
+                        to return it. Will update only dataSet[..], will not grow the items array.</p>
+                </li>
+                <li>
+                    <p><code>batchReady(jobUIDS=[], type:string, cb=&gt;)</code>: You want to wait until specific jobs has
+                        completed. Each job in batch is set uppon resolution is called, each time it checks if all your batch jobs are
+                        ready.</p>
+                    <ul>
+                        <li><code>jobUIDS</code> :specify working job uids</li>
+                        <li><code>type</code>: can return as <code>flat</code>&gt; array, or <code>grouped</code>&gt;
+                            object</li>
+                        <li><code>cb:</code> when ready returns callback</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><code>resolution(yourData:Object,uid:String,dataRef:String,doDelete:boolean )</code>: When ready
+                        call this to complete the job.</p>
+                    <ul>
+                        <li><code>yourData</code>:optional, provide data from outside source in correct format, example:
+                            <code>yourData {uid:[{dataSet},_ri,_uid],... }</code>, otherwise provide <code>null</code></li>
+                        <li><code>dataRef</code> your data is from external source:yourData, you have the option to
+                            provide <code>dataRef</code> if its other then <code>dataSet</code></li>
+                        <li><code>doDelete:true</code> will delete the job from class cache after finilized, you have
+                            the option not to delete it!
+                        </li>
+                    </ul>
+                </li>
+                <li><code>compute(callback(), method=&#39;all&#39;,uid)</code>: use this method to perform data
+                    calculation for each <code>job:uid</code>.<ul>
+                        <li><code>callback(item=&gt;)</code>: returns all items from <code>uid</code>, by default 1 callback with <code>method=all
+    </code> will be initiated. Make changes and return all new items (must provide same size). When
+                            <code>method=each</code> will loop thru each item sequently, must return 1 item. If you do not know your uid and want
+                            to use <code>each</code>, you
+                            must set <code>this.itemDataSet</code> to update callback, for clear explanation, take a
+                            look at examples in <code>./examples/index.js</code></li>
+                        <li><code>uid</code>: provide for data if not chaining, or switching to another job. When
+                            <code>uid</code>=null it will look for last used. If anonymous, because your data was async, must provide
+                            <code>formated()</code> &gt; with {dataSet[],_uid,_ri} so it can search thru and match available. </li>
+                    </ul>
+                </li>
+                <li>
+                    <p><code>getSet(uid,self:boolean)</code>: return data for desired <code>uid</code> in formated
+                        state.</p>
+                    <ul>
+                        <li><code>self:true</code>: you can chain this method. Then you must provide: getSet(...).d to
+                            return it.</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><code>formated(data[...], uid, external, clean)</code> : for some reason you want to make sure
+                        your data is correct. Provide job[...] as previously initialized with <code>set</code>. Does not update or change
+                        any internal class states.</p>
+                        <ul>
+                            <li><code>external:boolean</code> If its an external data that is not yet available in the
+                                class, will ignore validation.< /li> </ul> </li> <li>
+                                    <p><code>delSet(uid, force:true)</code>: manualy delete cache and history from the
+                                        class, specify <code>force=true</code> to delete all data.</p>
+                            </li>
+                        </ul>
+                        <h6 id="beta-tools">Beta Tools</h6>
+                        <ul>
+                            <li><code>of(uid)</code>: chaining multiple jobs, example: <code>a,b,c</code>
+                                <code>prm.of(uid:c)</code> &gt; to
+                                start tra
+                                cking from this job</li>
+                            <li><code>from(ri:index)</code> : will return items starting from that index when using
+                                <code>compute</code>, based of last <code>uid</code>, all other dataSets, part of this job will still return in
+                                <code>resolution</code></li>
+                        </ul>
+                        <h5 id="example-output-">Example output:</h5>
+    <pre class="prettyprint">
+        [{ dataSet: { name: &#39;daniel&#39;, age: 35 }, _ri: 0, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;lary&#39;, age: 65 }, _ri: 1, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;andy&#39;, age: 54 }, _ri: 2, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;john&#39;, age: 22 }, _ri: 3, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;mary&#39;, age: 15 }, _ri: 4, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;denny&#39;, age: 19 }, _ri: 5, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;gery&#39;, age: 55 }, _ri: 6, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;greg&#39;, age: 66 }, _ri: 7, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;jamie&#39;, age: 31 }, _ri: 8, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;derick&#39;, age: 44 }, _ri: 9, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;lily&#39;, age: 21 }, _ri: 10, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;marcus&#39;, age: 68 }, _ri: 11, _uid: &#39;index6&#39; },
+         { dataSet: { name: &#39;alexander&#39;, age: 44 }, _ri: 12, _uid: &#39;index6&#39;}]
+   </pre>
+                        <h5 id="notes">Notes</h5>
+                        <ul>
+                            <li>Can be implemented on browser/client and compiled down to ES5, in next version solution
+                                will be available.</li>
+                        </ul>
+
+                        <h5 id="log">log</h5>
+                        <ul>
+                            <li>20/10/2019 &gt; Payload Resolution Manager 1.0.0</li>
+                            <li>02/12/2019 &gt; Payload Resolution Manager 1.5.0</li>
+                        </ul>
+                        <h6>About the author</h6>
+                        <ul>
+                            <li>EagleX is a digital agency, we design and develop creative solutions for commercial and
+                                private use.</li>
+                            <li>Have questions, or would like to submit feedback, contact me at: <a
+                                    href="https://eaglex.net/app/contact?product=PayloadResolutionManager">eaglex.net</a>
+                            </li>
+                        </ul>
+
+
+                        <!-- Global site tag (gtag.js) - Google Analytics -->
+                        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-120198418-5"></script>
+                        <script>
+                            window.dataLayer = window.dataLayer || [];
+                            function gtag() { dataLayer.push(arguments); }
+                            gtag('js', new Date());
+
+                            gtag('config', 'UA-120198418-5');
+                        </script>
+</body>
+
+</html>
