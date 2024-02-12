@@ -23,9 +23,9 @@
         <li>License: <code>CC BY</code></li>
     </ul>
     <hr class="bg-white" />
-    <h5 id="about" class="mt-5">Bitbucket Repo:</h5>
+    <h5 id="about" class="mt-5">github Repo:</h5>
     <div class="mb-3">
-        <code> <a href="https://bitbucket.org/eag1ex/payload-resolution-manager">https://bitbucket.org/eag1ex/payload-resolution-manager</a> </code>
+        <code> <a href="https://github.com/eag1ex/payload-resolution-manager">hhttps://github.com/eag1ex/payload-resolution-manager</a> </code>
     </div>
     <h4 id="description">Description</h4>
     <ul>
@@ -70,7 +70,7 @@
                onlyComplete: true, // `resolution` will only return dataSets marked `complete`
                batch: true, // after running `resolution` method, each job that is batched using 
                `batchReady([jobA,jobB,jobC])`, only total batch will be returned when ready
-               resSelf: true, // allow chaning multiple resolution
+               resSelf: true, // allow changing multiple resolution
                autoComplete: true // auto set complete on every compute iteration within `each` call
            }
            const debug = true
@@ -259,11 +259,11 @@
                             look at examples in <code>./examples/index.js</code></li>
                         <li><code>uid</code>: provide for data if not chaining, or switching to another job. When
                             <code>uid</code>=null it will look for last used. If anonymous, because your data was async, must provide
-                            <code>formated()</code> &gt; with {dataSet[],_uid,_ri} so it can search thru and match available. </li>
+                            <code>formatted()</code> &gt; with {dataSet[],_uid,_ri} so it can search thru and match available. </li>
                     </ul>
                 </li>
                 <li>
-                    <p><code>getSet(uid,self:boolean)</code>: return data for desired <code>uid</code> in formated
+                    <p><code>getSet(uid,self:boolean)</code>: return data for desired <code>uid</code> in formatted
                         state.</p>
                     <ul>
                         <li><code>self:true</code>: you can chain this method. Then you must provide: getSet(...).d to
@@ -277,7 +277,7 @@
                         <ul>
                             <li><code>external:boolean</code> If its an external data that is not yet available in the
                                 class, will ignore validation.< /li> </ul> </li> <li>
-                                    <p><code>delSet(uid, force:true)</code>: manualy delete cache and history from the
+                                    <p><code>delSet(uid, force:true)</code>: manually delete cache and history from the
                                         class, specify <code>force=true</code> to delete all data.</p>
                             </li>
                         </ul>
