@@ -1,141 +1,144 @@
 html {
-    scroll-behavior: smooth;
-  }
+  scroll-behavior: smooth;
+}
 
-  .bold, .strong{
-    font-weight:bold;
-  }
+.bold,
+.strong {
+  font-weight: bold;
+}
 
-  .bg-white{
-    color:#333
-  }
-  .bg-secondary-2{
-    background-color: #555
-  }
+.bg-white {
+  color: #333;
+}
+.bg-secondary-2 {
+  background-color: #555;
+}
 
-  
-  .text-grey,  .text-grey code{
-    color:#ccc!important;
-  }
-  .text-grey code{
-    margin-top: 3px!important;
-  }
-  .text-pink{ 
-    color:#cc514b!important;
-   /* color:#e83e8c!important;*/
-  }
+.text-grey,
+.text-grey code {
+  color: #ccc !important;
+}
+.text-grey code {
+  margin-top: 3px !important;
+}
+.text-pink {
+  color: #cc514b !important;
+  /* color:#e83e8c!important;*/
+}
 
-  /* .bg-secondary-2 code{
+/* .bg-secondary-2 code{
     color:unset!important;
   } */
-  .text-black{
-    color:#333!important;
-  }
-  
-  .enquiry-btn{
-    font-size: smaller!important;
-    opacity: 0.9;
-  }
+.text-black {
+  color: #333 !important;
+}
 
-  .u{
-    text-decoration: underline;
-  }
- 
-  .text-black >*{
-    color:#333!important;
-  }
+.enquiry-btn {
+  font-size: smaller !important;
+  opacity: 0.9;
+}
 
-  .bg-secondary{
-    background-color: #555!important;
-  }
+.u {
+  text-decoration: underline;
+}
 
-  .test-it-action{
-    font-size: larger;
-  }
-  .o-x-h{
-    overflow-x: hidden;
-  }
-  .bg-black{
-    background-color: #333!important;
-    color:#fff!important;
-  }
+.text-black > * {
+  color: #333 !important;
+}
 
-  .bg-black-hard{
-    background-color: #000!important;
-    color:#fff!important;
-  }
+.bg-secondary {
+  background-color: #555 !important;
+}
 
-  .feature-section{
-    font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-    font-weight: bold;
-  }
-  .code{
-    font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-  }
+.test-it-action {
+  font-size: larger;
+}
+.o-x-h {
+  overflow-x: hidden;
+}
+.bg-black {
+  background-color: #333 !important;
+  color: #fff !important;
+}
 
-  .sale-pitch{
-    color:#fff
-  }
-  
-  footer > div{
-    font-size: smaller;
-  }
+.bg-black-hard {
+  background-color: #000 !important;
+  color: #fff !important;
+}
 
+.feature-section {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-weight: bold;
+}
+.code {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
 
-   .release-notes{
-     font-size: smaller;
-   }
-   .release-notes p{
-     font-weight: bold;
-     margin-bottom: 0.2rem;
-   }
-   .release-notes-link a{
-    font-size: small;
-    text-decoration: underline;
-   }
+.sale-pitch {
+  color: #fff;
+}
+footer {
+  margin-top: 20px;
+}
+footer > div {
+  font-size: smaller;
+}
 
+.release-notes {
+  font-size: smaller;
+}
+.release-notes p {
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+}
+.release-notes-link a {
+  font-size: small;
+  text-decoration: underline;
+}
 
-  /**
+/**
   responsive only
   **/
-  @media (max-width: 576px) {
-    img#top-logo{
-      max-width: 225px;
-      height: auto;
-      text-align: center;
-    }
-    .image-demo {
-      overflow: hidden;
-    }
-    .image-demo img{
-        width: 110%!important;
-        margin-left: -5%!important;
-        margin-right: 0!important;
-        padding-left:0!important;
-        padding-right:0!important;
-    }
-   }
+@media (max-width: 576px) {
+  img#top-logo {
+    max-width: 225px;
+    height: auto;
+    text-align: center;
+  }
+  .image-demo {
+    overflow: hidden;
+  }
+  .image-demo img {
+    width: 110% !important;
+    margin-left: -5% !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
 
-   /**
+/**
    color resets
    **/
-   .text-danger{
-     color:#cc514b!important;
-   }
-   .bg-danger{
-     background-color: #cc514b!important;
-   }
-   .text-info{
-     color:#3d827d!important;
-   }
-   .bg-info{
-    background-color: #3d827d!important;
-   }
+.text-danger {
+  color: #cc514b !important;
+}
+.bg-danger {
+  background-color: #cc514b !important;
+}
+.text-info {
+  color: #3d827d !important;
+}
+.bg-info {
+  background-color: #3d827d !important;
+}
 
-   code, .code{
-     color: #cc514b!important;
-   }
-   .nav-masthead .active{
-    border-bottom-color:#cc514b!important;
-   }
-   
+code,
+.code {
+  color: #cc514b !important;
+}
+.nav-masthead .active {
+  border-bottom-color: #cc514b !important;
+}

@@ -1,4 +1,4 @@
-#### [ Developed by Eaglex ](http://eaglex.net)
+#### [ Developed by MichaelWorks ](https://michaelworks.eaglex.net)
 
 ##### Name: Payload Resolution Manager (PRM)
 
@@ -50,7 +50,7 @@
 
 ##### PRM PRO:
 
-- Payload Resolution Manager PRO is also available - allows asynchronous secure connection, and sharing of information between transitioning JOBS. For business enquiries please contact Eaglex.
+- Payload Resolution Manager PRO is also available - allows asynchronous secure connection, and sharing of information between transitioning JOBS. For business enquiries please contact MichaelWorks.
 
 ##### Features:
 
@@ -283,7 +283,7 @@ prm.batchReady([job50, job60, job70], "flat", (d) => {
 
 ##### Contact
 
-- Have questions, or would like to submit feedback, `contact me at: https://eaglex.net/app/contact?product=PayloadResolutionManager`
+- Have questions, or would like to submit feedback, `contact me at: https://michaelworks.eaglex.net/connect`
 
 ##### LICENSE
 
