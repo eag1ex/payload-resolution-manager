@@ -22,6 +22,7 @@ cli.js
 *.ns
 journal
 
+_temp
 # Ignore Web Storm #
 .idea
 
